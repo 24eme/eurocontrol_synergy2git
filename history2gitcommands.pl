@@ -18,6 +18,7 @@ while(<STDIN>) {
     push(@{$objects{$object}{$typename}}, $2) if ($2) ;
   }else{
     s/^\s*//;
+    s/<void>//;
     push(@{$objects{$object}{$typename}}, $_) if ($_);
   }
 }
