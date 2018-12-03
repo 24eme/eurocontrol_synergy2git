@@ -15,7 +15,6 @@ while(<STDIN>) {
     $objects{$object}{$1} = $2;
   }elsif(/^(Comment|Predecessors|Successors):\s*(\S.*|)$/){
     $typename = $1;
-    $objects{$object}{$typename} = [];
     push(@{$objects{$object}{$typename}}, $2) if ($2) ;
   }else{
     s/^\s*//;
