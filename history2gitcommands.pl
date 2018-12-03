@@ -8,12 +8,12 @@ $ccm_cmd = "ccm" if (!$ccm_cmd);
 while(<STDIN>) {
   chomp;
   next if (/\*+/);
-  if (/^Object: *(\S+) \(project:([^)]*)\)/) {
+  if (/^Object:\s*(\S+) \(project:([^)]*)\)/) {
     $object = $1;
     $objects{$object}{"project"} = $2;
   }elsif(/^(Owner|Created|Task): *(\S.+)/) {
     $objects{$object}{$1} = $2;
-  }elsif(/^(Comment|Predecessors|Successors): *(\S*)/){
+  }elsif(/^(Comment|Predecessors|Successors):\s*(\S.*|)$/){
     $typename = $1;
     $objects{$object}{$typename} = [];
     push(@{$objects{$object}{$typename}}, $2) if ($2) ;
