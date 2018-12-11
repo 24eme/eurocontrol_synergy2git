@@ -1,6 +1,6 @@
 #!/bin.perl
 
-sub in_array
+sub in_array($$)
 {
     my ($arr,$search_for) = @_;
     my %items = map {$_ => 1} @$arr; # create a hash out of the array values
@@ -32,10 +32,10 @@ while(<STDIN>) {
 
 foreach $k (keys %objects) {
     foreach $s (@{$objects{$k}{"Successors"}}) {
-        push(@{$objects{$s}{"Predecessors"}}, $k) if ($k && $s && !in_array(@{$objects{$s}{"Predecessors"}}, $k));
+        push(@{$objects{$s}{"Predecessors"}}, $k) if ($k && $s && !in_array($objects{$s}{"Predecessors"}, $k));
     }
     foreach $p (@{$objects{$k}{"Predecessors"}}) {
-        push(@{$objects{$p}{"Successors"}}, $k) if ($k && $p && !in_array(@{$objects{$p}{"Successors"}}, $k));
+        push(@{$objects{$p}{"Successors"}}, $k) if ($k && $p && !in_array($objects{$p}{"Successors"}, $k));
     }
 }
 
