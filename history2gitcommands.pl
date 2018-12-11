@@ -63,7 +63,7 @@ sub followtree {
   $ccomment = join(" ", @{$objects{$key}{"Comment"}})." - tasks: ".$objects{$key}{"Task"}." ";
   print "git checkout tags/$cpredecessor\n";
   print "git branch $cbranch\n";
-  print "git checkout branches/$cbranch\n";
+  print "git checkout heads/$cbranch\n";
   print "rm -rf *;\n";
   print "$ccm_cmd cfs \"$key\" -p .\n";
   print "git add -A *\n";
