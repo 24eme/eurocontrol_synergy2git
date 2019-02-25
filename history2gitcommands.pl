@@ -4,6 +4,7 @@ $folder = shift;
 $folder = "repo" if (!$folder);
 $ccm_cmd = shift;
 $ccm_cmd = "ccm" if (!$ccm_cmd);
+$subadds = shift;
 
 while(<STDIN>) {
   chomp;
@@ -59,7 +60,8 @@ sub followtree {
   print "git branch $cbranch\n";
   print "git checkout heads/$cbranch\n";
   print "rm -rf *;\n";
-  print "$ccm_cmd cfs \"$key\" -p .\n";
+  print "$ccm_cmd cfs \"$key\" -p . \n";
+  print "$subadds \n" if ($subadds);
   print "git add -A *\n";
   print "git commit --author \"$cauthor\" --date \"$cdate\" -m \"$ccomment (imported via git2synergy)\"\n";
   print "git tag $cbranch\n";
