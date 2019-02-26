@@ -55,7 +55,7 @@ sub followtree {
   $owner = $objects{$key}{"Owner"};
   $cauthor = "$owner <" . $owner . "\@eurocontrol.int>";
   $cdate = $objects{$key}{"Created"};
-  $ccomment = "Project $key\\\n".join(" ", @{$objects{$key}{"Comment"}})."\\\n- tasks: ".$objects{$key}{"Task"}." ";
+  $ccomment = "Project $key - ".join(" ", @{$objects{$key}{"Comment"}})." - tasks: ".$objects{$key}{"Task"}." ";
   print "git checkout tags/$cpredecessor\n";
   print "git branch -d $cpredecessor 2> /dev/null\n";
   print "git branch $cbranch\n";
