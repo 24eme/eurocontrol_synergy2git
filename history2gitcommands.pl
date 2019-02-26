@@ -11,6 +11,7 @@ while(<STDIN>) {
   next if (/\*+/);
   if (/^Object:\s*(\S+) \(project:([^)]*)\)/) {
     $object = $1;
+    $object = "$object:project:$2" if (!grep(/:project:/, $object));
     $objects{$object}{"project"} = $2;
   }elsif(/^(Owner|Created|Task): *(\S.+)/) {
     $objects{$object}{$1} = $2;
