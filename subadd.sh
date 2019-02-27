@@ -30,7 +30,7 @@ done | while read md5 path extra ; do
 done | grep ';[a-f0-9]' | sed 's/;/ /g' | while read path id md5 ; do 
 	if test "$id" ; then 
 		echo -n $path";"$md5";" ; 
-		grep "$id" $allobj ;
+		grep "$id" $allobj | head -n 1
 		echo ; 
 	fi ; 
 done | awk -F ';' '{print $8" "$6" "$7" "$1}END{print "#FIN "}'  | grep '#' | while read date auteur task path ; do 
