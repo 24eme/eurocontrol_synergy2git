@@ -36,7 +36,7 @@ done | grep ';[a-f0-9]' | sed 's/;/ /g' | while read path id md5 ; do
 done | awk -F ';' '{print $8" "$6" "$7" "$1}END{print "#FIN "}'  | grep '#' | while read date auteur task path ; do 
 	if test "$old" && ! test "$old" = "$auteur $task"; then
                 if ! test "$mycomment" ; then
-			mycomment="commentaire vide"
+			mycomment="commentaire vide: $mytask"
 		fi
 		git commit -m "$mycomment" --date "$mydate" --author "$myauteur <$myauteur@eurocontrol.info>"
         fi
