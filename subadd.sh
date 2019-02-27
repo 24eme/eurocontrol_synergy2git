@@ -22,8 +22,10 @@ if ! test "$alltasks" ; then
 	exit 1
 fi
 
-git status -s | awk '{print "md5sum "$2}'| sh | while read md5 path ; do 
-	echo -n "$path;"; grep $md5 $objmd5  ;
+git status -s | awk '{print $2}' | while read path ; do
+	find $path -type f -exec md5sum '{}' ';' 
+done | while read md5 path extra ; do 
+	echo -n "$path;"; grep $md5 $objmd5  | head -n 1
 	echo ; 
 done | grep ';[a-f0-9]' | sed 's/;/ /g' | while read path id md5 ; do 
 	if test "$id" ; then 
