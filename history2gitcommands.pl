@@ -64,7 +64,7 @@ sub followtree {
   print "$ccm_cmd cfs \"$key\" -p . \n";
   print "$subadds \n" if ($subadds);
   print "git add -A *\n";
-  print "git commit --author \"$cauthor\" --date \"$cdate\" -m \"$ccomment (imported via git2synergy)\"\n";
+  print "git commit --allow-empty --author \"$cauthor\" --date \"$cdate\" -m \"$ccomment (imported via git2synergy)\"\n";
   print "git tag $cbranch\n";
   print STDERR "$tirets $key\n";
   foreach $successor (@{$objects{$key}{"Successors"}}) {
