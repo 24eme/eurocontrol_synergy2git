@@ -10,11 +10,11 @@ if ! test "$alltasks" ; then
 	echo ""
 	echo "ALL_OBJ_FILE: "
 	printf "\t"
-	echo "ccm query -ch \"type match '*'\"  -f \"%displayname %dtatus %owner %cvtype %project %task %objectname %{create_time[dateformat=\"yyyy-MM-dd_HH:mm:ss\"]}\""
+	echo "ccm query -ch \"type match '*'\"  -f \"%objectname %status %owner %task %{create_time[dateformat=\\\"yyyy-MM-dd_HH:mm:ss\\\"]} %displayname\" | sed 's/^ *//' | sed 's/  */;/g'"
 	echo "";
 	echo "ALL_TASKS_FILE:" 
 	printf "\t"
-	echo 'ccm query -ch -t task -f "%displayname %task_synopsis"';
+	echo "ccm query -ch -t task -f \"%displayname %task_synopsis\" | sed 's/^ *//' | sed 's/[ )]  */;/g'";
 	echo "";
 	echo "OBK2MD5_FILE:"
 	printf "\t"
@@ -23,15 +23,15 @@ if ! test "$alltasks" ; then
 fi
 
 git status -s | awk '{print "md5sum "$2}'| sh | while read md5 path ; do 
-	echo -n "$path "; grep $md5 $objmd5  ; 
+	echo -n "$path;"; grep $md5 $objmd5  ;
 	echo ; 
-done | grep '/'  | while read path id md5 ; do 
+done | grep ';[a-f0-9]' | sed 's/;/ /g' | while read path id md5 ; do 
 	if test "$id" ; then 
-		echo -n $path" "$md5" " ; 
-		grep "$id" $allobj ; 
+		echo -n $path";"$md5";" ; 
+		grep "$id" $allobj ;
 		echo ; 
 	fi ; 
-done | awk '{print $12" "$7" "$10" "$1}END{print "#FIN "}'  | grep '#' | while read date auteur task path ; do 
+done | awk -F ';' '{print $8" "$6" "$7" "$1}END{print "#FIN "}'  | grep '#' | while read date auteur task path ; do 
 	if test "$old" && ! test "$old" = "$auteur $task"; then
                 if ! test "$mycomment" ; then
 			mycomment="commentaire vide"
