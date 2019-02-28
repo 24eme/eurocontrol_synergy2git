@@ -9,10 +9,10 @@ $subadds = shift;
 while(<STDIN>) {
   chomp;
   next if (/\*+/);
-  if (/^Object:\s*(\S+) \(project:([^)]*)\)/) {
+  if (/^Object:\s*(\S+) \(([^:]*):([^)]*)\)/) {
     $object = $1;
-    $object = "$object:project:$2" if (!grep(/:project:/, $object));
-    $objects{$object}{"project"} = $2;
+    $object = "$object:$2:$3" if (!grep(/:$2:/, $object));
+    $objects{$object}{"project"} = $3;
   }elsif(/^(Owner|Created|Task): *(\S.+)/) {
     $objects{$object}{$1} = $2;
   }elsif(/^(Comment|Predecessors|Successors):\s*(\S.*|)$/){
