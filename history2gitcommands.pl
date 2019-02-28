@@ -27,10 +27,10 @@ while(<STDIN>) {
 
 foreach $k (keys %objects) {
   foreach $p (@{$objects{$k}{"Predecessors"}}) {
-       push(@{$objects{$p}{"Successors"}}, $k) if(!grep(/^$k$/, @{$objects{$p}{"Successors"}})) ;
+       push(@{$objects{$p}{"Successors"}}, $k) if(!grep($k, @{$objects{$p}{"Successors"}})) ;
   }
   foreach $s (@{$objects{$k}{"Successors"}}) {
-       push(@{$objects{$s}{"Predessors"}}, $k) if(!grep(/^$k$/, @{$objects{$s}{"Predessors"}})) ;
+       push(@{$objects{$s}{"Predessors"}}, $k) if(!grep($k, @{$objects{$s}{"Predessors"}})) ;
   }
 }
 
