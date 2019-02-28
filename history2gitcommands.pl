@@ -39,6 +39,31 @@ foreach $k (keys %objects) {
        push (@firsts, $k);
   }
 }
+foreach $k (keys %objects) {
+  if ($#{$objects{$k}{"Successors"}} < 0) {
+       push (@lasts, $k);
+  }
+}
+
+foreach $item (@lasts) {
+	while (removecyclic($item)) {
+	}
+}
+
+sub removecyclic {
+	my ($key, $alreadyseen) = @_;
+	$alreadyseen = \%alreadyseen unless($alreadseen);
+	$alreadyseen->{$key} = 1;
+	foreach $predessor (@{$objects{$key}{"Predessors"}}) {
+		if ($alreadyseen->{$predessor}) {
+                        @{$objects{$key}{"Predessors"}} = grep { $_ ne $predessor } @{$objects{$key}{"Predessors"}};
+			@{$objects{$key}{"Successors"}} = grep { $_ ne $key } @{$objects{$predessor}{"Successors"}};
+			return 1;
+		}
+		removecyclic($predessor, $alreadyseen);
+	}
+	return 0;
+}
 
 sub key2tagname {
   my ($key) = @_;
