@@ -30,7 +30,21 @@ fi
 touch db/md5_obj.csv
 mkdir -p files
 cat db/all_obj.csv | grep -v ':task:' | grep -v ':releasedef:' | grep -v '/admin/' | grep -v ':folder:' | grep -v ':dir:' | grep -v ':tset:' | awk -F ';' '{print $2}' | while read id ; do
-	if ! grep " "$id'$' db/md5_obj.csv > /dev/null ; then
+	retrieve_obj=""
+	if grep " "$id'$' db/md5_obj.csv > /tmp/$$.grep ; then
+		md5=$(cat /tmp/$$.grep | awk '{print $1}')
+                md5path="files/"$(echo $md5 | sed 's/\(..\)\(..\)/\1\/\2\//')
+		if ! test -s $md5path ; then
+			if ! test -s $md5path".history" ; then
+				retrieve_obj="GO"	
+			fi
+
+		fi
+		rm /tmp/$$.grep
+	else
+		retrieve_obj="GO"
+	fi
+	if test "$retrieve_obj" ; then
 		connect
 		ccm cat $id > .ccm_cat.tmp
                 if test -s .ccm_cat.tmp ; then
@@ -41,6 +55,10 @@ cat db/all_obj.csv | grep -v ':task:' | grep -v ':releasedef:' | grep -v '/admin
 			connect
 			ccm history $id > $md5path".history"
 		fi
-		echo "$md5 $id" >> db/md5_obj.csv
+		if test -s $md5path".history" ; then
+			echo "$md5 $id" >> db/md5_obj.csv
+		else
+			rm $md5path".history" ;
+		fi
 	fi
 done
