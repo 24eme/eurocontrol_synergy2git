@@ -3,7 +3,10 @@
 $oldest_version = shift;
 $newest_version = shift;
 
-require "history.pm";
+use File::Basename;
+$_dir_ = dirname(__FILE__);
+
+require $_dir_."/history.pm";
 
 sub explore {
 	my ($key, $last) = @_;
