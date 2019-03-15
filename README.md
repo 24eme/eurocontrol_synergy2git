@@ -20,7 +20,7 @@ The dump structure :
  - files/XX/YY/ZZZZZZZZZZZZZZZZZZZZZZZZZZZZ : the content of an object (XXYYZZZZZZZZZZZZZZZZZZZZZZZZZZZZ is the md5 of the content)
  - files/XX/YY/ZZZZZZZZZZZZZZZZZZZZZZZZZZZZ.history : the CMSynergy history of an object)
 
-## Advance convertion
+## Advanced conversion
 
     ccm history <version> | perl history2gitcommands.pl <directory> "ccm" $PWD"/subadd.sh  <path_to_dump>/db/all_obj.csv  <path_to_dump>/db/md5_obj.csv <path_to_dump>/db/all_tasks.csv" | bash
 
