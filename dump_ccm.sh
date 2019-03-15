@@ -53,12 +53,15 @@ cat db/all_obj.csv | grep -v ':task:' | grep -v ':releasedef:' | grep -v '/admin
 			mkdir -p $(dirname $md5path)
 			cat .ccm_cat.tmp | gzip > $md5path
 			connect
-			ccm history $id > $md5path".history"
+			if ! test -s $md5path".history" ; then
+				ccm history $id > $md5path".history"
+			fi
+			if test -s $md5path".history" ; then
+				echo "$md5;$id" >> db/md5_obj.csv
+			else
+				rm $md5path".history" ;
+			fi
 		fi
-		if test -s $md5path".history" ; then
-			echo "$md5 $id" >> db/md5_obj.csv
-		else
-			rm $md5path".history" ;
-		fi
+		rm .ccm_cat.tmp
 	fi
 done
