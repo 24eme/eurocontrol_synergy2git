@@ -6,7 +6,9 @@ $ccm_cmd = shift;
 $ccm_cmd = "ccm" if (!$ccm_cmd);
 $subadds = shift;
 
-require "history.pm";
+use File::Basename;
+$_dir_ = dirname(__FILE__);
+require $_dir_."/history.pm";
 
 sub key2tagname {
   my ($key) = @_;
