@@ -50,7 +50,7 @@ done | awk -F ';' '{print $8" "$6" "$7" "$1" "$2}END{print "#FIN "}' | grep '_' 
                 if ! test "$mycomment" ; then
 			mycomment="commentaire vide: $mytask"
 		fi
-		git commit -m "$mycomment" --date "$mydate" --author "$myauteur <$myauteur@eurocontrol.info>"
+		GIT_COMMITTER_DATE="$mydate" git commit -m "$mycomment" --date "$mydate" --author "$myauteur <$myauteur@eurocontrol.info>"
         fi
 	if test "$path" && test "$md5"; then
 		path2md5file=$path2dump"/files/"$(echo $md5 | sed 's/\(..\)\(..\)/\1\/\2\//')
