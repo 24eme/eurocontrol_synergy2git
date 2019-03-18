@@ -22,5 +22,5 @@ The dump structure :
 
 ## Advanced conversion
 
-    ccm history <version> | perl history2gitcommands.pl <directory> "ccm" $PWD"/subadd.sh  <path_to_dump>/db/all_obj.csv  <path_to_dump>/db/md5_obj.csv <path_to_dump>/db/all_tasks.csv" | bash
+    ccm history <version> | perl history2gitcommands.pl <repo_directory> "ccm" $PWD"/subadd.sh  <absolute_path_to_dump>/" | bash
 
