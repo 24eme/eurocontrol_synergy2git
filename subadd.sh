@@ -24,6 +24,8 @@ done > /tmp/subadd.$$.tmp
 
 git stash > /dev/null 
 
+chmod -R u+w .
+
 cat /tmp/subadd.$$.tmp | while read md5 path extra ; do 
 	echo -n "$path;"; grep $md5 $objmd5  | head -n 1
 	echo ; 
@@ -54,6 +56,7 @@ done | awk -F ';' '{print $8" "$6" "$7" "$1" "$2}END{print "#FIN "}' | grep '_' 
         fi
 	if test "$path" && test "$md5"; then
 		path2md5file=$path2dump"/files/"$(echo $md5 | sed 's/\(..\)\(..\)/\1\/\2\//')
+		mkdir -p $(dirname $path)
 		zcat $path2md5file > $path
 		git add $path
 	fi
