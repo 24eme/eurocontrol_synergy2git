@@ -47,7 +47,7 @@ done | grep ';[a-f0-9]' | sed 's/;/ /g' | while read path newmd5 newid; do
 	        grep "$newid" $allobj | head -n 1
 	        echo ;
 	fi
-done | awk -F ';' '{print $8" "$6" "$7" "$1" "$2}END{print "#FIN "}' | grep '_' | sort | while read date auteur task path md5; do 
+done | awk -F ';' '{print $8" "$6" "$7" "$1" "$2}END{print "#_FIN_ "}' | grep '_' | sort | while read date auteur task path md5; do 
 	if test "$old" && ! test "$old" = "$auteur $task"; then
                 if ! test "$mycomment" ; then
 			mycomment="commentaire vide: $mytask"
