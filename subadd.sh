@@ -64,7 +64,7 @@ done | awk -F ';' '{print $8" "$6" "$7" "$1" "$2}END{print "#_FIN_ "}' | grep '_
 	mytask=$task
 	mydate=$date
 	myauteur=$auteur
-	mycomment=$(grep "$task " $alltasks | sed 's/^[^)]*)//')
+	mycomment=$(grep ";$task[ ;]" $alltasks)
 done
 
 git stash pop > /dev/null
