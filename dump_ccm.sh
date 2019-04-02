@@ -27,6 +27,11 @@ if ! test -f db/all_tasks.csv ; then
 	ccm query -ch -t task -f "%displayname %task_synopsis" | sed 's/^ *//' | sed 's/[ )]  */;/g' > db/all_tasks.csv
 fi
 
+if ! test -f db/all_projects.csv; then
+	connect
+	ccm query -t project | sed 's/^ *//' | sed 's/  */;/g' > db/all_projects.csv 
+fi
+
 touch db/md5_obj.csv
 mkdir -p files
 cat db/all_obj.csv | grep -v ':task:' | grep -v ':releasedef:' | grep -v '/admin/' | grep -v ':folder:' | grep -v ':dir:' | grep -v ':tset:' | grep -v ';base/' | awk -F ';' '{print $2}' | while read id ; do
