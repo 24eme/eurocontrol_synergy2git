@@ -47,7 +47,7 @@ print("rm -rf .git *\n");
 print("git init\n");
 print("printf \"# $title \\n\\nrepository generated automaticaly\\n\" > README.md\n");
 print("git add README.md\n");
-print("GIT_COMMITTER_DATE=\"Sat Jan  1 00:00:00 CET 2000\" git commit --date=\"Sat Jan  1 00:00:00 CET 2000\" --author=\"synergy2git <contact@24eme.fr>\" -m \"initial commit\"\n");
+print("GIT_COMMITTER_DATE=\"Mon Jan  1 00:00:00 CET 1990\" git commit --date=\"Mon Jan  1 00:00:00 CET 1990\" --author=\"synergy2git <contact@24eme.fr>\" -m \"initial commit\"\n");
 print("git tag initial_commit\n");
 foreach $first (@firsts) {
   followtree($first, '-');
