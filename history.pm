@@ -39,8 +39,10 @@ foreach $k (keys %objects) {
   }
 }
 
-foreach $item (@lasts) {
-	while (removecyclic($item)) {
+if ($enable_removecyclic) {
+	foreach $item (@lasts) {
+		while (removecyclic($item)) {
+		}
 	}
 }
 
