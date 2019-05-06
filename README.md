@@ -31,7 +31,7 @@ The intermediate commits between project/revision is done by ``subadd.sh``. This
 
 ``<absolute_path_to_dump>`` is the dirctory generated thanks to ``dump_ccm.sh``.
 
-``<internal_path>`` is a specific directory (is source of a ccm cfs) where directly get the files
+``<internal_path>`` is a specific directory (in source of a ccm cfs) where directly get the files
 
 ## Integrating .gitignore files
 
