@@ -34,7 +34,7 @@ fi
 
 touch db/md5_obj.csv
 mkdir -p files
-cat db/all_obj.csv | grep -v ':task:' | grep -v ':releasedef:' | grep -v '/admin/' | grep -v ':folder:' | grep -v ':dir:' | grep -v ':tset:' | grep -v ';base/' | awk -F ';' '{print $2}' | while read id ; do
+cat db/all_obj.csv | grep -v ':task:' | grep -v ':releasedef:' | grep -v '/admin/' | grep -v ':folder:' | grep -v ':tset:' | grep -v ';base/' | awk -F ';' '{print $2}' | while read id ; do
 	retrieve_obj=""
 	if grep " "$id'$' db/md5_obj.csv > /tmp/$$.grep ; then
 		md5=$(cat /tmp/$$.grep | awk '{print $1}')
