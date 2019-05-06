@@ -27,9 +27,11 @@ An advanced version of the history is avaliable. It allows to create a commit pe
 
 The intermediate commits between project/revision is done by ``subadd.sh``. This script retrieves all the changed files and, thanks to their md5 checksums, the releted versions and their links to tasks. Thanks to the tasks, the script recreates the commits.
 
-    ccm history <version> | perl history2gitcommands.pl <repo_directory> "ccm" $PWD"/subadd.sh  <absolute_path_to_dump>/" | bash
+    ccm history <version> | perl history2gitcommands.pl <repo_directory> "ccm" $PWD"/subadd.sh  <absolute_path_to_dump>/" <internal_path> | bash
 
 ``<absolute_path_to_dump>`` is the dirctory generated thanks to ``dump_ccm.sh``.
+
+``<internal_path>`` is a specific directory (is source of a ccm cfs) where directly get the files
 
 ## Integrating .gitignore files
 
