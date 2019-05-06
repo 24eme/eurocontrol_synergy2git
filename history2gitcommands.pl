@@ -31,7 +31,8 @@ sub followtree {
   print "git branch $cbranch\n";
   print "git checkout heads/$cbranch\n";
   print "rm -rf *;\n";
-  print "$ccm_cmd cfs \"$key\" -p . \n";
+  print "$ccm_cmd cfs -r \"$key\" -p . \n";
+  print 'find . -type l | while read link ; do if test -d "$link"; then source=$(readlink "$link"); if test -d "$source" ; then rm "$link" ; cd $(dirname $link) ; rsync -a "$source" . ; cd - ; fi ; fi ; done'."\n";
   print "$subadds \n" if ($subadds);
   print "git add -A *\n";
   print "GIT_COMMITTER_DATE=\"$cdate\" git commit --allow-empty --author \"$cauthor\" --date \"$cdate\" -m \"$ccomment (imported via git2synergy)\"\n";
