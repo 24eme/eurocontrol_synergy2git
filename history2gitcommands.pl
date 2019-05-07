@@ -2,6 +2,7 @@
 
 $folder = shift;
 $folder = "repo" if (!$folder);
+$folder_repo = $folder."_repo";
 $folder_src = $folder."_src";
 $ccm_cmd = shift;
 $ccm_cmd = "ccm" if (!$ccm_cmd);
@@ -33,11 +34,16 @@ sub followtree {
   print "git branch -d $cpredecessor 2> /dev/null\n";
   print "git branch $cbranch\n";
   print "git checkout heads/$cbranch\n";
-  print "rm -rf ../$folder_src/*;\n";
-  print "$ccm_cmd cfs -r \"$key\" -p ../$folder_src \n";
-  print 'find ../'.$folder_src.' -type l | while read link ; do if test -d "$link"; then source=$(readlink "$link"); if test -d "$source" ; then rm "$link" ; cd $(dirname $link) ; rsync -a "$source" . ; cd - ; fi ; fi ; done'."\n";
-  print "rm -rf *;\n";
-  print "rsync -av ../$folder_src/$folderinside/ .\n";
+  print("cd ..\n");
+  print "rm -rf $folder_src\n";
+  print "mkdir $folder_src\n";
+  print "$ccm_cmd cfs -r \"$key\" -p $folder_src\n";
+  print "cd $folder_src\n";
+  print 'find . -type l | while read link ; do if test -d "$link"; then source=$(readlink "$link"); if test -d "$source" ; then rm "$link" ; cd $(dirname $link) ; rsync -a "$source" . ; cd - ; fi ; fi ; done'."\n";
+  print "cd ..\n";
+  print "rm -rf $folder_repo/*\n";
+  print "rsync -a $folder_src/$folderinside/ $folder_repo\n";
+  print "cd $folder_repo\n";
   print "find . -type d -empty -exec touch '{}'/.empty ';'\n";
   print "$subadds \n" if ($subadds);
   print "git add -A *\n";
@@ -48,9 +54,11 @@ sub followtree {
     followtree($successor, $tirets.'-');
   }
 }
-print("mkdir -p $folder\n");
-print("mkdir -p $folder_src\n");
+print("mkdir $folder\n");
 print("cd $folder\n");
+print("mkdir $folder_repo\n");
+print("mkdir $folder_src\n");
+print("cd $folder_repo\n");
 print("rm -rf .git *\n");
 print("git init\n");
 print("printf \"# $title \\n\\nrepository generated automaticaly\\n\" > README.md\n");
