@@ -43,7 +43,7 @@ sub followtree {
   print "cd $folder_repo\n";
   print "find . -type d -empty -exec touch '{}'/.empty ';'\n";
   print "$subadds \n" if ($subadds);
-  print "git add -A *\n";
+  print "git add -A .\n";
   print "GIT_COMMITTER_DATE=\"$cdate\" git commit --allow-empty --author \"$cauthor\" --date \"$cdate\" -m \"$ccomment (imported via git2synergy)\"\n";
   print "git tag $cbranch\n";
   print STDERR "$tirets $key\n";
