@@ -31,10 +31,9 @@ sub followtree {
   $cdate = $objects{$key}{"Created"};
   $ccomment = "Project $key - ".join(" ", @{$objects{$key}{"Comment"}})." - tasks: ".$objects{$key}{"Task"}." ";
   print "git checkout tags/$cpredecessor\n";
-  print "git branch -d $cpredecessor 2> /dev/null\n";
-  print "git branch $cbranch\n";
-  print "git checkout heads/$cbranch\n";
-  print("cd ..\n");
+  print "git branch -d master\n";
+  print "git checkout -b master\n";
+  print "cd ..\n";
   print "rm -rf $folder_src\n";
   print "mkdir $folder_src\n";
   print "$ccm_cmd cfs -r \"$key\" -p $folder_src\n";
