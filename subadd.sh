@@ -33,7 +33,7 @@ done | grep ';[a-f0-9]' | sed 's/;/ /g' | while read path newmd5 newid; do
 
 	oldmd5=$(md5sum $path | sed 's/ .*//')
 	patholdmd5file=$path2dump"/files/"$(echo $oldmd5 | sed 's/\(..\)\(..\)/\1\/\2\//')
-	oldid=$(grep $oldmd5 $objmd5 | sed 's/.*;//')
+	oldid=$(grep $oldmd5 $objmd5 | sed 's/.*;//' | tail -n 1)
 
 	if ! test "$oldmd5" = "$newmd5" ; then
 		cat $patholdmd5file".history" | perl $path2bin"/history4fileversions.pl" "$oldid" "$newid" | tail -n +2 | while read versionid ; do
