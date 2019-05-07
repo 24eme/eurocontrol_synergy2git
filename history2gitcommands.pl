@@ -38,6 +38,7 @@ sub followtree {
   print 'find ../'.$folder_src.' -type l | while read link ; do if test -d "$link"; then source=$(readlink "$link"); if test -d "$source" ; then rm "$link" ; cd $(dirname $link) ; rsync -a "$source" . ; cd - ; fi ; fi ; done'."\n";
   print "rm -rf *;\n";
   print "rsync -av ../$folder_src/$folderinside/ .\n";
+  print "find . -type d -empty -exec touch '{}'/.empty ';'\n";
   print "$subadds \n" if ($subadds);
   print "git add -A *\n";
   print "GIT_COMMITTER_DATE=\"$cdate\" git commit --allow-empty --author \"$cauthor\" --date \"$cdate\" -m \"$ccomment (imported via git2synergy)\"\n";
