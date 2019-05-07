@@ -32,6 +32,16 @@ if ! test -f db/all_projects.csv; then
 	ccm query -t project | sed 's/^ *//' | sed 's/  */;/g' > db/all_projects.csv 
 fi
 
+if ! test -f db/all_dirs.csv ; then 
+        grep ':dir:' export_ace_tools/db/all_obj.csv | awk -F ';' '{print $2}' | while read dir ; do
+		awk -F ';' '{print $2}'  export_ace_tools/db/all_projects.csv | while read project ; do
+			fullproject=$(grep $project":project" export_ace_tools/db/all_obj.csv | awk -F ';' '{print $2}' ) ;
+			connect
+			ccm query -u -nf -f %objectname "is_child_of('"$dir"', '"$fullproject"')" | sed 's/^/'$fullproject';'$dir';/' ;
+		done  ;
+	done > db/all_dirs.csv
+fi
+
 touch db/md5_obj.csv
 mkdir -p files
 cat db/all_obj.csv | grep -v ':task:' | grep -v ':releasedef:' | grep -v '/admin/' | grep -v ':folder:' | grep -v ':tset:' | grep -v ';base/' | awk -F ';' '{print $2}' | while read id ; do
