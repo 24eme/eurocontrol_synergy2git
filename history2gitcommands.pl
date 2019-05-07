@@ -30,9 +30,7 @@ sub followtree {
   $cauthor = "$owner <" . $owner . "\@eurocontrol.int>";
   $cdate = $objects{$key}{"Created"};
   $ccomment = "Project $key - ".join(" ", @{$objects{$key}{"Comment"}})." - tasks: ".$objects{$key}{"Task"}." ";
-  print "git checkout tags/$cpredecessor\n";
-  print "git branch -d master\n";
-  print "git checkout -b master\n";
+  print "git checkout -B master tags/$cpredecessor\n";
   print "cd ..\n";
   print "rm -rf $folder_src\n";
   print "mkdir $folder_src\n";
