@@ -1,5 +1,33 @@
 #!/bin/bash
 
+# the script dump_ccm.sh has two parameters
+# the parameter "base" is the name of the syngergy database, for example arh
+# the parameter "dir" is optional (by default same as base). It is the destination directory.
+
+# This script produces the result of 3 synergy queries reformated as csv*:
+# db/all_obj.csv
+#   query all objects: ccm query "type match '*'"
+#   format: %objectname %status %owner %task %{create_time[dateformat=\"yyyy-MM-dd_HH:mm:ss\"]} %displayname
+# db/all_tasks.csv
+#   query all objects of type task: ccm query -t task
+#   format: %displayname %task_synopsis
+# db/all_projects.csv
+#   query all projects: ccm query -t project
+#   default format: %displayname %status %owner %cvtype %project %task
+#
+# for each objects of type 'dir' found in db/all_obj.csv, the objectname contained in the directory are listed
+# using the query
+#   ccm query "is_child_of('$dir', '$fullproject')"
+# where fullproject takes as value successively all the values of db/all_projects.csv
+# the result is a csv file db/all_dirs.csv with 
+#
+# This script also produces the csv* file
+# db/md5_obj.csv that contains for each objectname, the hash of its content (md5sum is used for hashing). The order of the fields is the md5sum followed by the objectname.
+# The content of the file (compressed) is saved to a file named by the md5sum (the first two pairs of characters are used as subdirectories)
+# The history of the file (output of command ccm history) is saved in a file whose name is similar as previous file with the suffix ".history".
+#
+# *: csv files are separated by semi-colons.
+#
 base=$1
 dir=$2
 
@@ -7,6 +35,7 @@ if ! test "$dir"; then
 	dir=$1;
 fi
 
+# the routine "connect" is called before each query because synergy connections are unreliable
 function connect {
 	if ! test "$CCM_ADDR" || ! netstat -atn | grep  ":"$(echo $CCM_ADDR | awk -F ':' '{print $2}')" " | grep LISTEN > /dev/null ; then
 	        export CCM_ADDR=$(/ccm_data/common/ccmapp -cli $base)
@@ -33,9 +62,9 @@ if ! test -f db/all_projects.csv; then
 fi
 
 if ! test -f db/all_dirs.csv ; then 
-        grep ':dir:' export_ace_tools/db/all_obj.csv | awk -F ';' '{print $2}' | while read dir ; do
-		awk -F ';' '{print $2}'  export_ace_tools/db/all_projects.csv | while read project ; do
-			fullproject=$(grep $project":project" export_ace_tools/db/all_obj.csv | awk -F ';' '{print $2}' ) ;
+        grep ':dir:' db/all_obj.csv | awk -F ';' '{print $2}' | while read dir ; do
+		awk -F ';' '{print $2}'  db/all_projects.csv | while read project ; do
+			fullproject=$(grep $project":project" db/all_obj.csv | awk -F ';' '{print $2}' ) ;
 			connect
 			ccm query -u -nf -f %objectname "is_child_of('"$dir"', '"$fullproject"')" | sed 's/^/'$fullproject';'$dir';/' ;
 		done  ;
@@ -46,7 +75,7 @@ touch db/md5_obj.csv
 mkdir -p files
 cat db/all_obj.csv | grep -v ':task:' | grep -v ':releasedef:' | grep -v '/admin/' | grep -v ':folder:' | grep -v ':tset:' | grep -v ';base/' | awk -F ';' '{print $2}' | while read id ; do
 	retrieve_obj=""
-	if grep " "$id'$' db/md5_obj.csv > /tmp/$$.grep ; then
+	if grep ";"$id'$' db/md5_obj.csv > /tmp/$$.grep ; then
 		md5=$(cat /tmp/$$.grep | awk '{print $1}')
                 md5path="files/"$(echo $md5 | sed 's/\(..\)\(..\)/\1\/\2\//')
 		if ! test -s $md5path ; then
