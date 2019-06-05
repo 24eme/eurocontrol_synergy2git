@@ -41,7 +41,7 @@ done >> /tmp/subadd_content.$$.tmp
 
 
 # save all the changes to the stash. This revert the working tree to the last commit
-git stash > /dev/null 
+git stash > /dev/null
 
 # ensure we have write access
 chmod -R u+w .
@@ -50,9 +50,9 @@ chmod -R u+w .
 cat /tmp/subadd_content.$$.tmp | while read md5 path extra ; do
 	# use the md5sum to retrieve the objectname
 	echo -n "$path;"; grep $md5 $objmd5  | head -n 1
-	echo ; 
+	echo ;
 	# foreach pathname, md5sum and objectname
-done | grep ';[a-f0-9]' | sed 's/;/ /g' | while read path newmd5 newid; do 
+done | grep ';[a-f0-9]' | sed 's/;/ /g' | while read path newmd5 newid; do
 
 	# md5sum of the old file
 	oldmd5=$(md5sum $path | sed 's/ .*//')
@@ -75,15 +75,15 @@ done | grep ';[a-f0-9]' | sed 's/;/ /g' | while read path newmd5 newid; do
 			# - task (comma separated list of tasks)
 			# - create_time
 			# - displayname
-			echo -n $path";"$md5";" ; 
+			echo -n $path";"$md5";" ;
 			grep "$versionid" $allobj | head -n 1
-			echo ; 
+			echo ;
 		done
 	else
-	        # it is a new file
-	        echo -n $path";"$newmd5";" ;
-	        grep "$newid" $allobj | head -n 1
-	        echo ;
+        # it is a new file
+        echo -n $path";"$newmd5";" ;
+        grep "$newid" $allobj | head -n 1
+        echo ;
 	fi
 done > /tmp/subadd_tasks.$$.tmp
 
