@@ -19,7 +19,7 @@
 # using the query
 #   ccm query "is_child_of('$dir', '$fullproject')"
 # where fullproject takes as value successively all the values of db/all_projects.csv
-# the result is a csv file db/all_dirs.csv with 
+# the result is a csv file db/all_dirs.csv with
 #
 # This script also produces the csv* file
 # db/md5_obj.csv that contains for each objectname, the hash of its content (md5sum is used for hashing). The order of the fields is the md5sum followed by the objectname.
@@ -45,10 +45,10 @@ function connect {
 }
 
 mkdir -p $dir
-cd $dir 
+cd $dir
 mkdir -p db
 
-if ! test -f db/all_obj.csv ; then 
+if ! test -f db/all_obj.csv ; then
 	connect
 	ccm query -ch "type match '*'"  -f "%objectname %status %owner %task %{create_time[dateformat=\"yyyy-MM-dd_HH:mm:ss\"]} %displayname" | sed 's/^ *//' | sed 's/  */;/g' > db/all_obj.csv
 fi
@@ -60,10 +60,10 @@ fi
 
 if ! test -f db/all_projects.csv; then
 	connect
-	ccm query -t project | sed 's/^ *//' | sed 's/  */;/g' > db/all_projects.csv 
+	ccm query -t project | sed 's/^ *//' | sed 's/  */;/g' > db/all_projects.csv
 fi
 
-if ! test -f db/all_dirs.csv ; then 
+if ! test -f db/all_dirs.csv ; then
         grep ':dir:' db/all_obj.csv | awk -F ';' '{print $2}' | while read dir ; do
 		awk -F ';' '{print $2}'  db/all_projects.csv | while read project ; do
 			fullproject=$(grep $project":project" db/all_obj.csv | awk -F ';' '{print $2}' ) ;
@@ -79,10 +79,10 @@ cat db/all_obj.csv | grep -v ':task:' | grep -v ':releasedef:' | grep -v '/admin
 	retrieve_obj=""
 	if grep ";"$id'$' db/md5_obj.csv > /tmp/$$.grep ; then
 		md5=$(cat /tmp/$$.grep | awk '{print $1}')
-                md5path="files/"$(echo $md5 | sed 's/\(..\)\(..\)/\1\/\2\//')
-		if ! test -s $md5path ; then
-			if ! test -s $md5path".history" ; then
-				retrieve_obj="GO"	
+        md5path="files/"$(echo $md5 | sed 's/\(..\)\(..\)/\1\/\2\//')
+		if ! test -s "$md5path" ; then
+			if ! test -s "$md5path"".history" ; then
+				retrieve_obj="GO"
 			fi
 
 		fi
@@ -93,8 +93,8 @@ cat db/all_obj.csv | grep -v ':task:' | grep -v ':releasedef:' | grep -v '/admin
 	if test "$retrieve_obj" ; then
 		connect
 		ccm cat $id > .ccm_cat.tmp
-                if test -s .ccm_cat.tmp ; then
-			md5=$(md5sum .ccm_cat.tmp | awk '{print $1}')
+        if test -s .ccm_cat.tmp ; then
+			md5=$(md5sum .ccm_cat.tmp |  awk '{print $1}')
 			md5path="files/"$(echo $md5 | sed 's/\(..\)\(..\)/\1\/\2\//')
 			mkdir -p $(dirname $md5path)
 			cat .ccm_cat.tmp | gzip > $md5path
