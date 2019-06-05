@@ -63,7 +63,7 @@ done | grep ';[a-f0-9]' | sed 's/;/ /g' | while read path newmd5 newid; do
 	if ! test "$oldmd5" = "$newmd5" ; then
 		# use the script history4fileversions.pl to retrieve all the objectnames between $oldid and $newid ($newid is included but not $oldid thanks to the tail -n +2).
 		cat $patholdmd5file".history" | perl $path2bin"/history4fileversions.pl" "$oldid" "$newid" | tail -n +2 | while read versionid ; do
-			md5=$(grep $versionid $objmd5 | sed 's/;.*//')
+			md5=$(grep $versionid $objmd5 | sed 's/;.*//' | head -n 1)
 			# the output is on 9 columns:
 			# - the path
 			# - the md5sum of the file
