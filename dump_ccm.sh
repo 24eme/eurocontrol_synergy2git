@@ -35,6 +35,8 @@ if ! test "$dir"; then
 	dir=$1;
 fi
 
+basedir=$(pwd)"/"$(dirname $0)"/"
+
 # the routine "connect" is called before each query because synergy connections are unreliable
 function connect {
 	if ! test "$CCM_ADDR" || ! netstat -atn | grep  ":"$(echo $CCM_ADDR | awk -F ':' '{print $2}')" " | grep LISTEN > /dev/null ; then
@@ -108,4 +110,38 @@ cat db/all_obj.csv | grep -v ':task:' | grep -v ':releasedef:' | grep -v '/admin
 		fi
 		rm .ccm_cat.tmp
 	fi
+done
+
+cat db/all_dirs.csv | awkcat db/all_dirs.csv | awk -F ';' '{print $1";"$2}'  |  sort -u | while read project_dir_id ; do
+    project=$(echo $project_dir_id | awk -F ';' '{print $1}');
+    dir=$(echo $project_dir_id | awk -F ';' '{print $2}');
+	id=$dir
+
+    connect
+    ccm history "$dir" > .ccm.history;
+    prev=$( bash -c " echo ; cat .ccm.history | perl $basedir/history4fileversions.pl -n "$dir  | tail -n 2 | head -n 1  );
+
+    grep ';'$dir';' db/all_dirs.csv  | awk -F ';' '{print $3}'  | sort  -u > .dir.actual
+	echo "= $dir =" > .dir.content
+    cat  .dir.actual >> .dir.content
+    if test "$prev" ; then
+        grep ';'$prev';' db/all_dirs.csv | awk -F ';' '{print $3}'  | sort  -u > .dir.previous
+        diff .dir.previous .dir.actual | grep '^<' | sed 's/^</-/' >> .dir.content
+    fi
+
+    md5=$(md5sum .dir.content | awk '{print $1}')
+    md5path="files/"$(echo $md5 | sed 's/\(..\)\(..\)/\1\/\2\//')
+    mkdir -p $(dirname $md5path)
+    cat .dir.content > $md5path".dir"
+    cat .ccm.history > $md5path".history"
+
+	if test -s $md5path".history" ; then
+		echo "$md5;$id" >> db/md5_obj.csv
+	else
+		rm $md5path".history" ;
+		rm $md5path".dir" ;
+		rm $md5path ;
+	fi
+
+    rm -f .ccm.history .dir.actual .dir.previous .dir.content
 done
