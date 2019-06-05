@@ -28,19 +28,21 @@ $_dir_ = dirname(__FILE__);
 
 require $_dir_."/history.pm";
 
+if ($oldest_version eq '-n') {
+		$oldest_version = $firsts[0];
+}
+
 sub explore {
-	my ($key, $last) = @_;
-	return [$key] if ($key eq $last);
-	foreach $successor (@{$objects{$key}{"Successors"}}) {
-	    $ret = explore($successor, $last);
-	    if ($ret) {
-		unshift @{$ret}, $key;
-		return $ret;
-	    }
-	}
-	return 0;
+        my ($key, $last) = @_;
+        return [$key] if ($key eq $last);
+        foreach $successor (@{$objects{$key}{"Successors"}}) {
+            $ret = explore($successor, $last);
+            unshift @{$ret}, $key;
+            return $ret;
+        }
+        return [$key] ;
 
 }
 foreach $key (@{explore($oldest_version, $newest_version)}) {
-	print "$key\n";
+        print "$key\n";
 }
