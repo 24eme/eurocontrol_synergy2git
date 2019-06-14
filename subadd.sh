@@ -125,8 +125,8 @@ cat /tmp/subadd_tasks.$$.tmp | awk -F ';' '{print $8" "$6" "$7" "$1" "$2}END{pri
 	mytask=$task
 	mydate=$date
 	myauteur=$auteur
-        # retrieve the synopsis of the task
-	mycomment=$(grep ";$task[ ;]" $alltasks)
+	# retrieve the synopsis of the task
+	mycomment=$(grep ";$task[ ;]" $alltasks | sed 's/^[0-9]*;//')
 done
 
 # retrieve the stash to ensure the final commit will be faithfull to synergy
