@@ -112,7 +112,7 @@ cat db/all_obj.csv | grep -v ':task:' | grep -v ':releasedef:' | grep -v '/admin
 	fi
 done
 
-cat db/all_dirs.csv | awkcat db/all_dirs.csv | awk -F ';' '{print $1";"$2}'  |  sort -u | while read project_dir_id ; do
+cat db/all_dirs.csv | awk -F ';' '{print $1";"$2}'  |  sort -u | while read project_dir_id ; do
     project=$(echo $project_dir_id | awk -F ';' '{print $1}');
     dir=$(echo $project_dir_id | awk -F ';' '{print $2}');
 	id=$dir
