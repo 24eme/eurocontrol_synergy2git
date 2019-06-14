@@ -62,6 +62,8 @@ sub followtree {
   print "cd $folder_src\n";
   # for each link toward a directory in $folder_src, replace it be a copy of the directory tree pointed by the link
   print 'find . -type l | while read link ; do if test -d "$link"; then source=$(readlink "$link"); if test -d "$source" ; then rm "$link" ; cd $(dirname $link) ; rsync -a "$source" . ; cd - ; fi ; fi ; done'."\n";
+  #Hack to avoid spaces 
+  print "find . -name '* *'  | perl -e 'while (<STDIN>) { chomp; next unless(\$_); \$e=\$_; \$e =~ s/ /_/g ; rename \$_, \$e ; }'\n";
   print "cd ..\n";
   # empty the working tree (removes everything except .git directory and .gitignore file)
   print "rm -rf $folder_repo/*\n";
