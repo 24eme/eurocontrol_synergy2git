@@ -15,9 +15,12 @@ my $synergy_db = shift @ARGV;
 # absolute path toward the git repository
 my $root_dir = shift @ARGV;
 
+unless ($synergy_db && $root_dir) {
+    print STDERR "USAGE: $0 <synergy_db_name> <dump_dir_path>\n";
+    exit 1;
+}
 
 &connect();
-
 
 # step 1: query all objects (not is_product)
 my %objs;
