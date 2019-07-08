@@ -49,7 +49,7 @@ sub followtree {
   $cdate = $objects{$key}{"Created"};
   $ccomment = "Project $key - ".join(" ", @{$objects{$key}{"Comment"}})." - tasks: ".$objects{$key}{"Task"}." ";
   # reset the branch master to point to the commit of the previous version of project
-  print "git checkout -B master tags/$cpredecessor\n";
+  print "git checkout -b master tags/$cpredecessor\n";
   print "cd ..\n";
   # empty the directory that will be used for synergy extraction
   print "rm -rf $folder_src\n";
