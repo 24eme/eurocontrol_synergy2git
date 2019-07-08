@@ -75,7 +75,7 @@ if (-e $filename) {
         }
         chomp $hash_content;
         chomp $hash_hist;
-        print $dest "$hash_content;$hash_hist;$k\n";
+        print $dest "$hash_content;$hash_hist;$k;$path\n";
     }
     close $dest;
 }
