@@ -15,24 +15,6 @@ my $synergy_db = shift @ARGV;
 # absolute path toward the git repository
 my $root_dir = shift @ARGV;
 
-# step 0: create a git repository, a README.md, a first commit and a branch named db
-unless (-d $root_dir) {
-    make_path("$root_dir") or die "Can't mkdir -p $root_dir: $!";
-    chdir $root_dir or die "Can't chdir -p $root_dir: $!";
-
-    open (my $file, '>', "$root_dir/README.md") or die "Can't create README.md: $!";
-    print $file "# EUROCONTROL's migration of CM Synergy base $synergy_db toward git\n\n";
-    print $file "all objects are dumped in branch db\n";
-    close $file;
-
-    system('git init .') == 0 or die "Can't git init .";
-    system('git add README.md') == 0 or die "Can't git add README.md";
-    system("git commit -m 'initial commit: migration of $synergy_db'") == 0 or die "Can't git commit";
-    system("git branch db") == 0 or die "Can't git branch db";
-}
-
-chdir $root_dir or die "Can't chdir -p $root_dir: $!";
-system('git checkout db') == 0 or die "Can't git checkout db";
 
 &connect();
 
