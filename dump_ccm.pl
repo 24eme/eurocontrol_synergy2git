@@ -18,6 +18,7 @@ my $root_dir = shift @ARGV;
 
 &connect();
 
+chdir ($root_dir);
 
 # step 1: query all objects (not is_product)
 my %objs;
