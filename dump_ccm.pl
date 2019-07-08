@@ -58,7 +58,7 @@ if (-e $filename) {
         my ($name, $version, $ctype, $instance) = parse_object_name($k);
 
         # skip what can not be dumped
-        next if $ctype =~ m/^(task|releasedef|folder|tset|dir|baseline|process_rule)$/;
+        next if $ctype =~ m/^(task|releasedef|folder|tset|dir|process_rule)$/;
 
         my $path = "${ctype}/${name}/${instance}/${version}";
         make_path($path) or die "Can't mkdir -p $path: $!" unless -d $path;
@@ -93,7 +93,6 @@ system ("rm -rf *-tempo*");
 foreach my $k (sort keys %objs) {
     my ($name, $version, $ctype, $instance) = parse_object_name($k);
     next if $ctype ne 'project';
-    next if $objs{$k}->{'Status'} ne 'released';
 
     if (-e "$root_dir/${ctype}/${name}/${instance}/${version}/ls") {
         print "Skip project $k already dumped\n";
