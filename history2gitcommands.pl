@@ -97,6 +97,10 @@ print("rm -rf .git *\n");
 print("git init\n");
 print("printf \"# $title \\n\\nrepository generated automaticaly\\n\" > README.md\n");
 print("git add README.md\n");
+# keep .gitignore file if exist in parent directory
+print ("if [ -f '../.gitignore' ];then\ncp ../.gitignore .\nfi\n");
+# or if exist inside directory $folder_repo
+print ("if [ -f '.gitignore' ];then\ngit add .gitignore\nfi\n");
 print("GIT_COMMITTER_DATE=\"Mon Jan  1 00:00:00 CET 1990\" git commit --date=\"Mon Jan  1 00:00:00 CET 1990\" --author=\"synergy2git <contact@24eme.fr>\" -m \"initial commit\"\n");
 print("git tag initial_commit\n");
 # for each version of the project that have no ancestor
