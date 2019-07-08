@@ -18,17 +18,29 @@ use strict;
 use warnings;
 
 use File::Path qw(make_path);
+use Cwd qw(cwd);
 
 my %obj2content;
 my %obj2hist; # not used in this script
 my $verbose = 0;
 
+print STDERR "$0 "."@ARGV"."\n";
+
+my ($path2gitdb, $top_objectname, $delivery_objectname, @dep_names) = @ARGV;
+unless ($path2gitdb && $top_objectname){
+    print STDERR "USAGE $0 <path_to_git_db> <top_objectname>\n";
+    exit 4;
+}
+
+my $root = cwd();
+chdir($path2gitdb);
+
 unless (-e "./.git") {
-    print STDERR "Not in a git directory\n";
+    print STDERR "ERROR: $path2gitdb isn't a git repo\n";
     exit 1;
 }
 unless (-f "./.git/refs/heads/db") {
-    print STDERR "The git repository should have a db banch\n";
+    print STDERR "ERROR: the git repository ($path2gitdb) should have a db banch\n";
     exit 2;
 }
 
@@ -41,12 +53,6 @@ foreach my $line (git_show('md5_obj.csv')) {
 unless (keys(%obj2hist)."") {
     print STDERR "cannot have access to the object list :(\n";
     exit 3;
-}
-
-my ($root, $top_objectname, $delivery_objectname, @dep_names) = @ARGV;
-unless ($root && $top_objectname){
-    print STDERR "USAGE $0 <path_to_destination> <top_objectname>\n";
-    exit 4;
 }
 
 my %hdep_names = map {($_ => 1)} @dep_names;
