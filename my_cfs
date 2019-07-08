@@ -92,7 +92,7 @@ sub dump_tree {
             if ($obj2content{$file} eq '') { # this should hapen only for is_product objects. Normally obj2content does not exist for them.
                 warn "no content for $file  for $relpath\n";
             } else {
-                `git cat-file blob $obj2content{$file} > $root/${relpath}$name`;
+                `git cat-file blob $obj2content{$file} > "$root/${relpath}$name" 2> /dev/null || echo "ERROR: impossible to retreive $file ($obj2content{$file}) to $root/${relpath}$name" >&2`;
             }
         } else {
             warn "$file not found for $relpath\n";
