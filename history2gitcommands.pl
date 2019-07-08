@@ -54,12 +54,12 @@ sub followtree {
   # empty the directory that will be used for synergy extraction
   print "rm -rf $folder_src\n";
   print "mkdir $folder_src\n";
+  print "cd $folder_src\n";
   # synergy recursive copy of a project to file system (in directory $folder_src)
   # before execution of this script the following settings shall be adjust on work area:
   #  - Place work area relative to parent projects's
   #  - File Options: copies
-  print "$ccm_cmd cfs -r \"$key\" -p $folder_src\n";
-  print "cd $folder_src\n";
+  print "$ccm_cmd \"$key\"\n";
   # for each link toward a directory in $folder_src, replace it be a copy of the directory tree pointed by the link
   print 'find . -type l | while read link ; do if test -d "$link"; then source=$(readlink "$link"); if test -d "$source" ; then rm "$link" ; cd $(dirname $link) ; rsync -a "$source" . ; cd - ; fi ; fi ; done'."\n";
   #Hack to avoid spaces 
