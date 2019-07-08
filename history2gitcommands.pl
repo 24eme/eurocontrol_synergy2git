@@ -53,7 +53,7 @@ sub followtree {
   print "cd ..\n";
   # empty the directory that will be used for synergy extraction
   print "rm -rf $folder_src\n";
-  print "mkdir $folder_src\n";
+  print "mkdir -p $folder_src\n";
   # synergy recursive copy of a project to file system (in directory $folder_src)
   # before execution of this script the following settings shall be adjust on work area:
   #  - Place work area relative to parent projects's
@@ -88,10 +88,10 @@ sub followtree {
   }
 }
 # initialize the git repository
-print("mkdir $folder\n");
+print("mkdir -p $folder\n");
 print("cd $folder\n");
-print("mkdir $folder_repo\n");
-print("mkdir $folder_src\n");
+print("mkdir -p $folder_repo\n");
+print("mkdir -p $folder_src\n");
 print("cd $folder_repo\n");
 print("rm -rf .git *\n");
 print("git init\n");
