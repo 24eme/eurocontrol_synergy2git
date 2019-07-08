@@ -22,13 +22,32 @@ use File::Path qw(make_path);
 my %obj2content;
 my %obj2hist; # not used in this script
 
+unless (-e "./.git") {
+    print STDERR "Not in a git directory\n";
+    exit 1;
+}
+unless (-f "./.git/refs/heads/db") {
+    print STDERR "The git repository should have a db banch\n";
+    exit 2;
+}
+
 foreach my $line (git_show('md5_obj.csv')) {
     my ($content, $hist, $obj) = split(';', $line);
     $obj2content{$obj} = $content;
     $obj2hist{$obj} = $hist;
 }
 
+unless (keys(%obj2hist)."") {
+    print STDERR "cannot have access to the object list :(\n";
+    exit 3;
+}
+
 my ($root, $top_objectname, $delivery_objectname, @dep_names) = @ARGV;
+unless ($root && $top_objectname){
+    print STDERR "USAGE $0 <path_to_destination> <top_objectname>\n";
+    exit 4;
+}
+
 my %hdep_names = map {($_ => 1)} @dep_names;
 my ($delname, $delversion, $delctype, $delinstance) = parse_object_name($delivery_objectname);
 
