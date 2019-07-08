@@ -21,6 +21,7 @@ use File::Path qw(make_path);
 
 my %obj2content;
 my %obj2hist; # not used in this script
+my $verbose = 0;
 
 unless (-e "./.git") {
     print STDERR "Not in a git directory\n";
@@ -49,22 +50,20 @@ unless ($root && $top_objectname){
 }
 
 my %hdep_names = map {($_ => 1)} @dep_names;
-my ($delname, $delversion, $delctype, $delinstance) = parse_object_name($delivery_objectname);
+
+my ($delname, $delversion, $delctype, $delinstance);
 
 # if an object is encountered more than once, the second occurence is replaced by a symlink
-my %encountered_objects = ($delivery_objectname => $delname);
+my %encountered_objects;
 
 dump_tree('', $top_objectname, '');
-# the delivery project is dumped last
-my ($topname) = parse_object_name($top_objectname);
-dump_tree("$topname/$delname/", $delivery_objectname, "$delname/");
 
 sub dump_tree {
     # relpath is destination directory (relative to $root), either empty or has a trailing /
     # subpath is subdirectory of objectname, either empty or with trailing /
     my ($relpath, $top_objectname, $subpath) = @_;
     make_path("$root/$relpath");
-    print "Dumping tree $top_objectname $subpath toward $relpath\n";
+    print STDERR "Dumping tree $top_objectname $subpath toward $relpath\n" if ($verbose);
     my @ls = git_show(object_name_to_path($top_objectname) . "/${subpath}ls");
 
     # subprojects are processed after the content of project, but their location is memorized first
@@ -77,7 +76,7 @@ sub dump_tree {
         next if $ctype eq 'project';
         if ($ctype eq 'symlink') {
             my ($symlink_content) = git_show(object_name_to_path($file)."/content");
-            print "symlink $symlink_content, $root/${relpath}$name\n";
+            print "symlink $symlink_content, $root/${relpath}$name\n" if ($verbose);
             symlink ($symlink_content, "$root/${relpath}$name");
         } elsif ($ctype eq 'dir') {
             dump_tree("${relpath}$name/", $top_objectname, "${subpath}$name/");
@@ -100,7 +99,7 @@ sub dump_tree {
         my ($name, $version, $ctype, $instance) = parse_object_name($proj);
         next if $name eq $delname; # ensure delivery project is dumped last
         if (exists $hdep_names{$name}) {
-            print "replace subproject $name by a link\n";
+            print STDERR "replace subproject $name by a link\n" if($verbose);
             createsymlink($name, $relpath, "dependencies/${name}-$version");
         } elsif ($encountered_objects{$proj} ne "${relpath}$name") {
             createsymlink($name, $relpath, $encountered_objects{$proj});
@@ -112,7 +111,7 @@ sub dump_tree {
 
 sub createsymlink {
     my ($name, $whereami, $target) = @_;
-    print "createsymlink ($name, $whereami, $target)\n";
+    print STDERR "createsymlink ($name, $whereami, $target)\n" if ($verbose);
     symlink(findrealpath($whereami, $target), "$root/${whereami}$name");
 }
 
@@ -128,6 +127,7 @@ sub findrealpath {
 # dump a file in the branch db and returns an array of lines
 sub git_show {
     my $path = shift;
+    print STDERR "git show db:${path}\n" if ($verbose);
     open my $cmd, "git show db:${path} |" or die "Can't exec git show db:${path}: $!";
     my @files = <$cmd>;
     chomp @files;
@@ -143,18 +143,19 @@ sub object_name_to_path {
 # split the four part objectname even in edge cases (names containing dash or separated from version using colon instead of dash)
 sub parse_object_name {
     my $objectname = shift;
+    print STDERR "resolving '$objectname'\n" if ($verbose);
     # extract fourth part: instance
     my $ri = rindex($objectname, ':');
-    die "wrong objectname $objectname does not contain : before instance" if $ri == -1;
+    die "wrong objectname '$objectname' does not contain : before instance" if $ri == -1;
     my $instance = substr($objectname, $ri + 1);
     # extract third part: type
     my $cri = rindex($objectname, ':', $ri - 1);
-    die "wrong objectname $objectname does not contain : before type" if $cri == -1;
+    die "wrong objectname '$objectname' does not contain : before type" if $cri == -1;
     my $ctype = substr($objectname, $cri + 1, $ri - $cri -1);
     # extract second part: version
     my $vri = rindex($objectname, ':', $cri - 1);
     $vri = rindex($objectname, '-', $cri - 1) if $vri == -1;
-    die "wrong objectname $objectname does not contain : or - before version" if $vri == -1;
+    die "wrong objectname '$objectname' does not contain : or - before version" if $vri == -1;
     my $version = substr($objectname, $vri + 1, $cri - $vri -1);
     # first part: name
     my $name = substr($objectname, 0, $vri);
