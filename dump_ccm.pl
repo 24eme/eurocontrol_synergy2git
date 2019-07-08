@@ -26,7 +26,7 @@ if (-e 'all_obj.dump') {
     %objs = %$VAR1;
 } else {
   # beware that "not is_product=TRUE" is not the same as "is_product=FALSE" because is_product is undefined for most of the objects
-  %objs = &ccm_query_with_retry('all_obj', '%objectname %status %owner %release %task %{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}', "type match '*' and not is_product=TRUE");
+  %objs = &ccm_query_with_retry('all_obj', '%objectname %status %owner %release %task %{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}', "type match '*'");
 }
 
 # remove entries where objectname contains /
@@ -58,7 +58,7 @@ if (-e $filename) {
 
         # skip what can not be dumped
         next if $ctype =~ m/^(task|releasedef|folder|tset|dir|baseline|process_rule)$/;
-        
+
         my $path = "${ctype}/${name}/${instance}/${version}";
         make_path($path) or die "Can't mkdir -p $path: $!" unless -d $path;
         my $hash_content = "";
@@ -159,7 +159,7 @@ sub connect {
    }
 }
 
-# 
+#
 sub ccm_query_with_retry {
     my @args = @_;
     while (1) {
@@ -245,5 +245,3 @@ sub ccm_query {
     close $dest;
     return %res;
 }
-
-
