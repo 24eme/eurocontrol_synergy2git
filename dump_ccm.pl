@@ -142,7 +142,7 @@ chdir ($root_dir);
 foreach my $k (sort keys %objs) {
     my ($name, $version, $ctype, $instance) = parse_object_name($k);
     next if $ctype ne 'dir';
-    foreach my $fullproject ( project_containing_an_object($k) ) {
+    foreach my $fullproject ( projects_containing_an_object($k) ) {
         my %content = &ccm_query_with_retry('dir_content', '%objectname %release', "is_child_of(\"$k\", \"$fullproject\")");
         my %res;
         my $ls;
@@ -203,14 +203,14 @@ sub get_previous_version {
     return $h;
 }
 
-sub project_containing_an_object {
+sub projects_containing_an_object {
     my $objectname = shift;
-    open my $grep, "grep -r project |";
+    open my $grep, "grep -r  $objectname project |";
     my @projects;
     my $idfile;
     foreach (<$grep>) {
         chomp;
-        s/^([^\/]*\/[^\/]*\/[^\/]*\/[^\/]*)\/.*ls:.*/$1\/id/;
+        next unless (s/^([^\/]*\/[^\/]*\/[^\/]*\/[^\/]*)\/.*ls:.*/$1\/id/);
         if ( open $idfile, $_ ) {
             my $id = <$idfile>;
             close $idfile;
