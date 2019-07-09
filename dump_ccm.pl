@@ -83,6 +83,33 @@ if (-e $filename) {
 }
 
 
+# exec_obj.csv contains the list of objectname that have been identified as executables.
+$filename = "$root_dir/exec_obj.csv";
+my %exec_obj;
+if (-e $filename) {
+    print "reading $filename\n";
+    open (my $file, '<', $filename) or die "Can't read $filename: $!";
+    while (my $line = <$file>) {
+        chomp $line;
+        $exec_obj{$line}++;
+    }
+}
+open (my $filex, '>>', $filename) or die "Can't append to $filename: $!";
+
+# not_exec_obj.csv contains the list of objectname that have been identified as not executables.
+my $filename_not = "$root_dir/not_exec_obj.csv";
+my %not_exec_obj;
+if (-e $filename_not) {
+    print "reading $filename_not\n";
+    open (my $file, '<', $filename_not) or die "Can't read $filename_not: $!";
+    while (my $line = <$file>) {
+        chomp $line;
+        $not_exec_obj{$line}++;
+    }
+}
+open (my $filex_not, '>>', $filename_not) or die "Can't append to $filename_not: $!";
+
+
 # step 4 recursive ls of each baselined projects
 # if process is stoped during extraction of a project, the work area shall be removed
 # manually and the file "ls" in the top directory shall be removed so that it is started again at next start:
@@ -123,8 +150,21 @@ foreach my $k (sort keys %objs) {
             chomp $file;
             next if $file eq '';
             my ($fname, $fversion, $fctype, $finstance) = parse_object_name($file);
-            next unless $fctype eq 'symlink';
-            `readlink $dir/$fname > $root_dir/${fctype}/${fname}/${finstance}/${fversion}/content`;
+            if ($fctype eq 'symlink') {
+                `readlink "$dir/$fname" > "$root_dir/${fctype}/${fname}/${finstance}/${fversion}/content"`;
+            } elsif ($fctype ne 'dir' and $fctype ne 'project') {
+                # if a file is encountered memorize its permissions (executable or not)
+                if ((not exists $exec_obj{$file})) {
+                    if ((-l "$dir/$fname" && -x readlink("$dir/$fname"))
+                        or -x "$dir/$fname") {
+                        $exec_obj{$file}++;
+                        print $filex "$file\n";
+                    } else {
+                        $not_exec_obj{$file}++;
+                        print $filex_not "$file\n";
+                    }
+                }
+            }
         }
     }
     chdir ('..');
@@ -142,6 +182,9 @@ foreach my $k (sort keys %objs) {
     # clean the .moved directory
     system("rm -rf $ENV{HOME}/ccm_wa/.moved/$synergy_db/*");
 }
+close $filex;
+close $filex_not;
+
 
 # split the four part objectname even in edge cases (names containing dash or separated from version using colon instead of dash)
 sub parse_object_name {
