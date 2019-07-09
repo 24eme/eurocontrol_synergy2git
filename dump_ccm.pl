@@ -144,7 +144,7 @@ foreach my $k (sort keys %objs) {
     foreach my $dir (@all_dirs) {
         my $git_path = "$root_dir/${ctype}/${name}/${instance}/${version}/$dir";
         make_path($git_path);
-        my @ls = `ccm ls $dir -f '%objectname' | tee ${git_path}/ls`;
+        my @ls = `ccm ls "$dir" -f '%objectname' | tee "${git_path}/ls"`;
         # if a symlink is encountered, memorize its value
         foreach my $file (@ls) {
             chomp $file;
