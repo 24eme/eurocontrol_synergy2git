@@ -37,8 +37,9 @@ if (-e 'all_obj.dump') {
 
 # remove entries where objectname contains /
 map {delete $objs{$_};} grep {/\//} keys %objs;
+# remove entrie of temporairy objects
+map {delete $objs{$_};} grep {/-temp/} keys %objs;
 print "Objs finished\n";
-
 
 # step 2: query all tasks
 my %tasks;
