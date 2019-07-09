@@ -58,13 +58,13 @@ if (-e $filename) {
         my ($name, $version, $ctype, $instance) = parse_object_name($k);
 
         # skip what can not be dumped
-        next if $ctype =~ m/^(task|releasedef|folder|tset|dir|process_rule)$/;
+        next if $ctype =~ m/^(task|releasedef|folder|tset|process_rule)$/;
 
         my $path = "${ctype}/${name}/${instance}/${version}";
         make_path($path) or die "Can't mkdir -p $path: $!" unless -d $path;
         my $hash_content = "";
         my $hash_hist    = "";
-        if ($ctype !~ m/^(project|symlink)$/) {
+        if ($ctype !~ m/^(project|symlink|dir)$/) {
             system ("ccm cat '$k' > '$path/content'") == 0  or warn ("Can't cat $k\n");
             $hash_content = `git hash-object '$path/content'`;
         }
