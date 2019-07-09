@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 use File::Path qw(make_path);
-use File::Basename qw(basename);
+use File::Basename qw(basename dirname);
 use Cwd qw(realpath);
 use Data::Dumper;
 
@@ -14,6 +14,7 @@ use Data::Dumper;
 my $synergy_db = shift @ARGV;
 # absolute path toward the git repository
 my $root_dir = shift @ARGV;
+my $bin_dir = realpath(dirname($0));
 
 unless ($synergy_db && $root_dir) {
     print STDERR "USAGE: $0 <synergy_db_name> <dump_dir_path>\n";
@@ -134,6 +135,86 @@ foreach my $k (sort keys %objs) {
     system("ccm delete '$prj'") == 0 or die "ccm delete failed for $prj";
 }
 
+# step 5 : retreive the content of directories
+foreach my $k (sort keys %objs) {
+     my ($name, $version, $ctype, $instance) = parse_object_name($k);
+     next if $ctype ne 'dir';
+     foreach my $fullproject ( project_containing_an_object($k) ) {
+         my %content = &ccm_query_with_retry('dir_content', '%objectname %release', "is_child_of(\"$k\", \"$fullproject\")");
+         open my $ls,  "$root_dir/${ctype}/${name}/${instance}/${version}/ls";
+	 my %res;
+         foreach (<$ls>) {
+                chomp;
+                $res{$_} = $_;
+         }
+         close $ls;
+         foreach my $contentid ( keys %content )  {
+             $contentid =~ s/\s.*//;
+             $res{$contentid} = $contentid ;
+         }
+         open $ls,  "> $root_dir/${ctype}/${name}/${instance}/${version}/ls";
+         foreach ( sort keys %res ) {
+             print $ls "$_\n";
+         }
+         close $ls;
+     }
+}
+
+# step 6 : retrive the deleted content of directories
+foreach my $k (sort keys %objs) {
+     my ($name, $version, $ctype, $instance) = parse_object_name($k);
+     next if $ctype ne 'dir';
+     my $previous = get_previous_version($k);
+     next unless ($previous);
+     my ($pname, $pversion, $pctype, $pinstance) = parse_object_name($previous);
+     next unless (-f "$root_dir/${pctype}/${pname}/${pinstance}/${pversion}/ls");
+     next unless (-f "$root_dir/${ctype}/${name}/${instance}/${version}/ls");
+     open my $diff, "diff $root_dir/${pctype}/${pname}/${pinstance}/${pversion}/ls $root_dir/${ctype}/${name}/${instance}/${version}/ls | grep '^<' | grep -v '^< - ' |" ;
+     open my $ls,  ">> $root_dir/${ctype}/${name}/${instance}/${version}/ls";
+     foreach (<$diff>) {
+	chomp;
+        s/^< *//;
+        print $ls "- $_\n";
+     }
+     close $diff;
+     close $ls;
+}
+
+sub get_previous_version {
+     my $k = shift;
+     my ($name, $version, $ctype, $instance) = parse_object_name($k);
+     my $history_path = "$root_dir/${ctype}/${name}/${instance}/${version}/hist";
+     open my $history, "cat $history_path | perl $bin_dir/history4fileversions.pl -n $k |" ;
+     my @history = <$history>;
+     close $history;
+     pop @history;
+     if ($#history < 0) {
+	return ;
+     }
+     my $h = pop @history;
+     chomp($h);
+     return $h;
+}
+
+sub project_containing_an_object {
+	my $objectname = shift;
+	open my $grep, "grep -r $objectname project |";
+	my @projects;
+	my $idfile;
+	foreach (<$grep>) {
+		chomp;
+		s/^([^\/]*\/[^\/]*\/[^\/]*\/[^\/]*)\/.*ls:.*/$1\/id/;
+		if ( open $idfile, $_ ) {
+			my $id = <$idfile>;
+			close $idfile;
+                        chomp ($id);
+			push @projects, "$id";
+		}
+	}
+	return @projects;
+}
+
+
 # split the four part objectname even in edge cases (names containing dash or separated from version using colon instead of dash)
 sub parse_object_name {
     my $objectname = shift;
@@ -204,6 +285,13 @@ sub ccm_query {
     open my $cmd, "$query |" or die "Can't exec ccm query command: $!";
     #open my $cmd, '<', "queries/${name}.txt" or die "Can't exec queries/${name}.txt: $!";
     my $ch = <$cmd>;
+    chomp $ch if ($ch);
+    unless ($ch) {
+        close $cmd;
+        my $exit_status = $? >> 8;
+        die "Bad exit status $exit_status" if ($exit_status && $exit_status != 6);
+	return %res;
+    }
     my @starts = (0);
     my @ends;
     my @titles;
@@ -246,7 +334,7 @@ sub ccm_query {
     }
     close $cmd;
     my $exit_status = $? >> 8;
-    die "Bad exit status $exit_status" if $exit_status;
+    die "Bad exit status $exit_status" if ($exit_status && $exit_status != 6);
     $filename = "$root_dir/${name}.dump";
     open $dest, '>', $filename or die "Can't write $filename: $!";
     print $dest Dumper(\%res);
