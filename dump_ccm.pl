@@ -88,7 +88,7 @@ if (-e $filename) {
 # manually and the file "ls" in the top directory shall be removed so that it is started again at next start:
 #   rm ../arh_repo/project/Oasis_Component_Model/ARH#1/ACE2005B_V0.9/ls
 #   ccm delete Oasis_Component_Model-tempo3368
-my $wa_dir = realpath("$root_dir/../tmp");
+my $wa_dir = realpath("$root_dir/../tmp$$");
 make_path($wa_dir);
 chdir $wa_dir or die "Can't chdir $wa_dir: $!";
 system ("rm -rf *-tempo*");
@@ -103,7 +103,8 @@ foreach my $k (sort keys %objs) {
     }
     print "Creating a wa of $k\n";
 
-    if (system("ccm cp -t tempo$$ -no_u -scope project_only -setpath $wa_dir $k") != 0) {
+    # create a copy of a project with a working area (link based) and no_update
+    if (system("ccm cp -t tempo$$ -no_u -lb -scope project_only -setpath $wa_dir $k") != 0) {
         warn "ccm cp failed for $k skip it for the moment\n";
         next;
     }
