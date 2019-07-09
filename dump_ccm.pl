@@ -73,6 +73,7 @@ if (-e $filename) {
         } else {
             warn ("Can't ccm history $k\n");
         }
+        system("echo $k > $path/id")
         chomp $hash_content;
         chomp $hash_hist;
         print $dest "$hash_content;$hash_hist;$k;$path\n";
