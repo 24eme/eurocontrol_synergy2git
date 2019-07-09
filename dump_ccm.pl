@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-    eval 'exec /usr/bin/perl -S $0 ${1+"$@"}'
-        if 0; #$running_under_some_shell
+eval 'exec /usr/bin/perl -S $0 ${1+"$@"}'
+if 0; #$running_under_some_shell
 
 use strict;
 use warnings;
@@ -31,8 +31,8 @@ if (-e 'all_obj.dump') {
     my $VAR1 = do 'all_obj.dump';
     %objs = %$VAR1;
 } else {
-  # beware that "not is_product=TRUE" is not the same as "is_product=FALSE" because is_product is undefined for most of the objects
-  %objs = &ccm_query_with_retry('all_obj', '%objectname %status %owner %release %task %{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}', "type match '*'");
+    # beware that "not is_product=TRUE" is not the same as "is_product=FALSE" because is_product is undefined for most of the objects
+    %objs = &ccm_query_with_retry('all_obj', '%objectname %status %owner %release %task %{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}', "type match '*'");
 }
 
 # remove entries where objectname contains /
@@ -47,7 +47,7 @@ if (-e 'all_task.dump') {
     my $VAR1 = do 'all_task.dump';
     %tasks = %$VAR1;
 } else {
-  %tasks = &ccm_query_with_retry('all_task', '%displayname %release %task_synopsis', '-t task');
+    %tasks = &ccm_query_with_retry('all_task', '%displayname %release %task_synopsis', '-t task');
 }
 print "Tasks finished\n";
 
@@ -140,85 +140,85 @@ chdir ($root_dir);
 
 # step 5 : retreive the content of directories
 foreach my $k (sort keys %objs) {
-     my ($name, $version, $ctype, $instance) = parse_object_name($k);
-     next if $ctype ne 'dir';
-     foreach my $fullproject ( project_containing_an_object($k) ) {
-         my %content = &ccm_query_with_retry('dir_content', '%objectname %release', "is_child_of(\"$k\", \"$fullproject\")");
-         my %res;
-	 my $ls;
-         if (-f "$root_dir/${ctype}/${name}/${instance}/${version}/ls") {
-             open $ls,  "$root_dir/${ctype}/${name}/${instance}/${version}/ls";
-             foreach (<$ls>) {
+    my ($name, $version, $ctype, $instance) = parse_object_name($k);
+    next if $ctype ne 'dir';
+    foreach my $fullproject ( project_containing_an_object($k) ) {
+        my %content = &ccm_query_with_retry('dir_content', '%objectname %release', "is_child_of(\"$k\", \"$fullproject\")");
+        my %res;
+        my $ls;
+        if (-f "$root_dir/${ctype}/${name}/${instance}/${version}/ls") {
+            open $ls,  "$root_dir/${ctype}/${name}/${instance}/${version}/ls";
+            foreach (<$ls>) {
                 next if (/^- /);
                 chomp;
                 $res{$_} = $_;
-             }
-             close $ls;
-         }
-         foreach my $contentid ( keys %content )  {
-             $contentid =~ s/\s.*//;
-             $res{$contentid} = $contentid ;
-         }
-         open $ls,  "> $root_dir/${ctype}/${name}/${instance}/${version}/ls";
-         foreach ( sort keys %res ) {
-             print $ls "$_\n";
-         }
-         close $ls;
-     }
+            }
+            close $ls;
+        }
+        foreach my $contentid ( keys %content )  {
+            $contentid =~ s/\s.*//;
+            $res{$contentid} = $contentid ;
+        }
+        open $ls,  "> $root_dir/${ctype}/${name}/${instance}/${version}/ls";
+        foreach ( sort keys %res ) {
+            print $ls "$_\n";
+        }
+        close $ls;
+    }
 }
 
 # step 6 : retrive the deleted content of directories
 foreach my $k (sort keys %objs) {
-     my ($name, $version, $ctype, $instance) = parse_object_name($k);
-     next if $ctype ne 'dir';
-     my $previous = get_previous_version($k);
-     next unless ($previous);
-     my ($pname, $pversion, $pctype, $pinstance) = parse_object_name($previous);
-     next unless (-f "$root_dir/${pctype}/${pname}/${pinstance}/${pversion}/ls");
-     next unless (-f "$root_dir/${ctype}/${name}/${instance}/${version}/ls");
-     open my $diff, "diff $root_dir/${pctype}/${pname}/${pinstance}/${pversion}/ls $root_dir/${ctype}/${name}/${instance}/${version}/ls | grep '^<' | grep -v '^< - ' |" ;
-     open my $ls,  ">> $root_dir/${ctype}/${name}/${instance}/${version}/ls";
-     foreach (<$diff>) {
-	chomp;
+    my ($name, $version, $ctype, $instance) = parse_object_name($k);
+    next if $ctype ne 'dir';
+    my $previous = get_previous_version($k);
+    next unless ($previous);
+    my ($pname, $pversion, $pctype, $pinstance) = parse_object_name($previous);
+    next unless (-f "$root_dir/${pctype}/${pname}/${pinstance}/${pversion}/ls");
+    next unless (-f "$root_dir/${ctype}/${name}/${instance}/${version}/ls");
+    open my $diff, "diff $root_dir/${pctype}/${pname}/${pinstance}/${pversion}/ls $root_dir/${ctype}/${name}/${instance}/${version}/ls | grep '^<' | grep -v '^< - ' |" ;
+    open my $ls,  ">> $root_dir/${ctype}/${name}/${instance}/${version}/ls";
+    foreach (<$diff>) {
+        chomp;
         s/^< *//;
         print $ls "- $_\n";
-     }
-     close $diff;
-     close $ls;
+    }
+    close $diff;
+    close $ls;
 }
 
 sub get_previous_version {
-     my $k = shift;
-     my ($name, $version, $ctype, $instance) = parse_object_name($k);
-     my $history_path = "$root_dir/${ctype}/${name}/${instance}/${version}/hist";
-     open my $history, "cat $history_path | perl $bin_dir/history4fileversions.pl -n $k |" ;
-     my @history = <$history>;
-     close $history;
-     pop @history;
-     if ($#history < 0) {
-	return ;
-     }
-     my $h = pop @history;
-     chomp($h);
-     return $h;
+    my $k = shift;
+    my ($name, $version, $ctype, $instance) = parse_object_name($k);
+    my $history_path = "$root_dir/${ctype}/${name}/${instance}/${version}/hist";
+    open my $history, "cat $history_path | perl $bin_dir/history4fileversions.pl -n $k |" ;
+    my @history = <$history>;
+    close $history;
+    pop @history;
+    if ($#history < 0) {
+        return ;
+    }
+    my $h = pop @history;
+    chomp($h);
+    return $h;
 }
 
 sub project_containing_an_object {
-	my $objectname = shift;
-	open my $grep, "grep -r project |";
-	my @projects;
-	my $idfile;
-	foreach (<$grep>) {
-		chomp;
-		s/^([^\/]*\/[^\/]*\/[^\/]*\/[^\/]*)\/.*ls:.*/$1\/id/;
-		if ( open $idfile, $_ ) {
-			my $id = <$idfile>;
-			close $idfile;
-                        chomp ($id);
-			push @projects, "$id";
-		}
-	}
-	return @projects;
+    my $objectname = shift;
+    open my $grep, "grep -r project |";
+    my @projects;
+    my $idfile;
+    foreach (<$grep>) {
+        chomp;
+        s/^([^\/]*\/[^\/]*\/[^\/]*\/[^\/]*)\/.*ls:.*/$1\/id/;
+        if ( open $idfile, $_ ) {
+            my $id = <$idfile>;
+            close $idfile;
+            chomp ($id);
+            push @projects, "$id";
+        }
+    }
+    return @projects;
 }
 
 
@@ -245,14 +245,14 @@ sub parse_object_name {
 
 # wait for reconnection to synergy (tolerates the long backup interruption)
 sub connect {
-   while (1) {
-       $ENV{CCM_ADDR} = `/ccm_data/common/ccmapp -cli $synergy_db`;
-       chomp $ENV{CCM_ADDR};
-       # check if success
-       return if `ccm delim` eq "-\n";
-       print "Connect failed, retrying in 5s\n";
-       sleep 5;
-   }
+    while (1) {
+        $ENV{CCM_ADDR} = `/ccm_data/common/ccmapp -cli $synergy_db`;
+        chomp $ENV{CCM_ADDR};
+        # check if success
+        return if `ccm delim` eq "-\n";
+        print "Connect failed, retrying in 5s\n";
+        sleep 5;
+    }
 }
 
 #
@@ -297,7 +297,7 @@ sub ccm_query {
         close $cmd;
         my $exit_status = $? >> 8;
         die "Bad exit status $exit_status" if ($exit_status && $exit_status != 6);
-	return %res;
+        return %res;
     }
     my @starts = (0);
     my @ends;
