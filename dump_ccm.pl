@@ -101,6 +101,7 @@ foreach my $k (sort keys %objs) {
         print "Skip project $k already dumped\n";
         next;
     }
+  START:
     print "Creating a wa of $k\n";
 
     # create a copy of a project with a working area (link based) and no_update
@@ -127,7 +128,19 @@ foreach my $k (sort keys %objs) {
         }
     }
     chdir ('..');
-    system("ccm delete '$prj'") == 0 or die "ccm delete failed for $prj";
+    # delete the project
+    if (system("ccm delete '$prj'") != 0) {
+        warn "ccm delete failed for $prj\n";
+        &connect();
+        if (system("ccm delete '$prj'") != 0) {
+            warn "ccm delete failed twice for $prj\n";
+            system ("rm -rf $wa_dir/*");
+        }
+        # in case of problems, restart the dump of the last project
+        goto START;
+    }
+    # clean the .moved directory
+    system("rm -rf $ENV{HOME}/ccm_wa/.moved/$synergy_db/*");
 }
 
 # split the four part objectname even in edge cases (names containing dash or separated from version using colon instead of dash)
