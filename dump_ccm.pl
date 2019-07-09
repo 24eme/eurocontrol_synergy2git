@@ -73,6 +73,8 @@ if (-e $filename) {
         if ($ctype !~ m/^(project|symlink|dir)$/) {
             system ("ccm cat '$k' > '$path/content'") == 0  or warn ("Can't cat $k\n");
             $hash_content = `git hash-object '$path/content'`;
+        }elsif($ctype eq 'dir') {
+            $hash_content = `echo $k | git hash-object /dev/stdin`;
         }
         if (system ("ccm history '$k' > '$path/hist'") == 0) {
             $hash_hist    = `git hash-object $path/hist`;
