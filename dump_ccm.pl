@@ -306,10 +306,11 @@ sub ccm_query {
     my @titles;
     my $inside = 1;
     #print "ch=$ch\n";
-    @titles = split(/\s+/, $ch);
+    @titles = split(/\s\s+/, $ch);
     while (my $line = <$cmd>) {
+        chomp($line);
         my %record;
-        my @fields = split(/\s+/, $line);
+        my @fields = split(/\s\s+/, $line);
         #print join(';', @fields), "\n";
         print $dest join(';', @fields), "\n";
         foreach my $i (1..$#titles) {
