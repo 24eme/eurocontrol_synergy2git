@@ -205,7 +205,7 @@ sub get_previous_version {
 
 sub project_containing_an_object {
 	my $objectname = shift;
-	open my $grep, "grep -r $objectname project |";
+	open my $grep, "grep -r project |";
 	my @projects;
 	my $idfile;
 	foreach (<$grep>) {
