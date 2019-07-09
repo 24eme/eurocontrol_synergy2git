@@ -136,19 +136,25 @@ foreach my $k (sort keys %objs) {
     system("ccm delete '$prj'") == 0 or die "ccm delete failed for $prj";
 }
 
+chdir ($root_dir);
+
 # step 5 : retreive the content of directories
 foreach my $k (sort keys %objs) {
      my ($name, $version, $ctype, $instance) = parse_object_name($k);
      next if $ctype ne 'dir';
      foreach my $fullproject ( project_containing_an_object($k) ) {
          my %content = &ccm_query_with_retry('dir_content', '%objectname %release', "is_child_of(\"$k\", \"$fullproject\")");
-         open my $ls,  "$root_dir/${ctype}/${name}/${instance}/${version}/ls";
-	 my %res;
-         foreach (<$ls>) {
+         my %res;
+	 my $ls;
+         if (-f "$root_dir/${ctype}/${name}/${instance}/${version}/ls") {
+             open $ls,  "$root_dir/${ctype}/${name}/${instance}/${version}/ls";
+             foreach (<$ls>) {
+                next if (/^- /);
                 chomp;
                 $res{$_} = $_;
+             }
+             close $ls;
          }
-         close $ls;
          foreach my $contentid ( keys %content )  {
              $contentid =~ s/\s.*//;
              $res{$contentid} = $contentid ;
