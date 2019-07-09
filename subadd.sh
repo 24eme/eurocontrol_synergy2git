@@ -113,11 +113,11 @@ cat /tmp/subadd_tasks.$$.tmp | awk -F ';' '{print $8";"$6";"$7";"$1";"$2}END{pri
 		# perform the file change or creation in the working tree
 		path2fileindb=$(git $dbargs show db:md5_obj.csv | grep $hash | awk -F ';' '{print $4}' | tail -n 1)
 		#retrieve the content if exists
-		if git $dbargs show db:$path2fileindb | grep content ; then
+		if git $dbargs show db:$path2fileindb | grep content > /dev/null ; then
 			mkdir -p $(dirname "$path")
 			git $dbargs show db:$path2fileindb"/content" > "$path"
 		#otherwise if there is a .dir file, it's a deletion
-		elif git $dbargs show db:$path2fileindb | grep ls ; then
+		elif git $dbargs show db:$path2fileindb | grep ls > /dev/null; then
 			rm "$path"
 		fi
 		# stage the file for the next commit
