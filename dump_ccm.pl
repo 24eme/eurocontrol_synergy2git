@@ -105,6 +105,9 @@ foreach my $k (sort keys %objs) {
         warn "ccm cp failed for $k skip it for the moment\n";
         next;
     }
+    unless (-d "$root_dir/${ctype}/${name}/${instance}/${version}") {
+        next;
+    }
     chdir $wa_dir or die "Can't chdir $wa_dir: $!";
     my $prj = `ls`; chomp $prj;
     chdir($prj) or die "Can't chdir ${prj}: $!";
