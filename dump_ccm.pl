@@ -304,34 +304,10 @@ sub ccm_query {
     my @titles;
     my $inside = 1;
     #print "ch=$ch\n";
-    foreach my $i (1..length($ch)) {
-        my $is_space = substr($ch, $i, 1) =~ m/ |\n/;
-        if ($inside) {
-            if ($is_space) {
-                push @ends, $i-1;
-                my $s = substr($ch, $starts[$#starts], $i-$starts[$#starts]);
-                push @titles, $s;
-                #print "title ", $titles[$#titles], " $s $starts[$#starts] $i \n";
-                $inside = 0;
-            }
-        } else {
-            if (!$is_space) {
-                $inside = 1;
-                push @starts, $i;
-                #print "push starts $starts[$#starts]\n";
-            }
-        }
-    }
-    my @lengths = map {$starts[$_] - $starts[$_-1]} 1..$#titles;
-    push @lengths, -1;
+    @titles = split(/\s+/, $ch);
     while (my $line = <$cmd>) {
         my %record;
-        my @fields;
-        foreach my $i (0..$#titles) {
-            my $field = substr($line, $starts[$i], $lengths[$i]);
-            $field =~ s/\s+$//;
-            push @fields, $field;
-        }
+        my @fields = split(/\s+/, $line);
         #print join(';', @fields), "\n";
         print $dest join(';', @fields), "\n";
         foreach my $i (1..$#titles) {
