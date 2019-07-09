@@ -13,7 +13,7 @@ use Data::Dumper;
 # name of the synergy database (for example arh)
 my $synergy_db = shift @ARGV;
 # absolute path toward the git repository
-my $root_dir = shift @ARGV;
+my $root_dir = realpath(shift @ARGV);
 my $bin_dir = realpath(dirname($0));
 
 unless ($synergy_db && $root_dir) {
