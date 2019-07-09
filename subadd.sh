@@ -111,7 +111,7 @@ cat /tmp/subadd_tasks.$$.tmp | awk -F ';' '{print $8";"$6";"$7";"$1";"$2}END{pri
 	fi
 	if test "$path" && test "$hash"; then
 		# perform the file change or creation in the working tree
-		path2fileindb=$(git $dbargs show db:md5_obj.csv | grep $hash | awk -F ';' '{print $4}')
+		path2fileindb=$(git $dbargs show db:md5_obj.csv | grep $hash | awk -F ';' '{print $4}' | tail -n 1)
 		#retrieve the content if exists
 		if git $dbargs show db:$path2fileindb | grep content ; then
 			mkdir -p $(dirname "$path")
