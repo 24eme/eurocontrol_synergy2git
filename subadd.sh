@@ -92,7 +92,7 @@ done | grep ';' > /tmp/subadd_tasks.$$.tmp
 cat /tmp/subadd_status.$$.tmp | grep " D " | awk '{print $2}' | while read path ; do
 	deletion_hash=$(git cat-file -p $(git ls-tree HEAD "$path" | cut -d " " -f 3 | sed -r 's/^([a-z0-9]+).+$/\1/')  | git hash-object /dev/stdin )
 	deletion_id=$(git $dbargs show db:md5_obj.csv | grep $deletion_hash | awk -F ';' '{print $3}' | tail -n 1)
-	deletion_dirpath=$(git $dbargs grep  '^- remedy.pl-2' db | awk -F ':' '{print $1":"$2}' | sed 's|/ls|/id|' | head -n 1)
+	deletion_dirpath=$(git $dbargs grep  '^- '$deletion_id db | awk -F ':' '{print $1":"$2}' | sed 's|/ls|/id|' | head -n 1)
 	deletion_dirid=$(git $dbargs show $deletion_dirpath)
 	deletion_dirhash=$(git $dbargs show db:md5_obj.csv | grep $deletion_dirid | tail -n 1 | awk -F ';' '{print $1}')
 	echo -n $path";"$deletion_dirhash";" ;
