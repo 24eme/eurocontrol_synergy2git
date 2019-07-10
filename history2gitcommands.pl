@@ -1,14 +1,12 @@
 #!/bin/perl
 
 # the aim of the script history2gitcommands.pl is to migrate a project managed in synergy toward a git repository
-# it assumes dump_ccm.sh has already be runned to extract 
+# it assumes dump_ccm.sh has already be runned to extract
 # the parameters are:
 # - repo_directory: the prefix used for the creation of two directories
 #    - <repo_directory>_repo that will contain the git repository. It should be created before running this script if we need a .gitignore
 #    - <repo_directory>_src that will be used for extraction
-# - ccm: the constant string "ccm"
-# - subadds: the string "$PWD/subadd.sh  <absolute_path_to_dump>"
-#      this is used to launch script subadd.sh that takes a single parameter: the repo_directory
+# - path_to_the_gitdb_dump: path to the git repository containing the dump created thanks to dump_ccm.pl
 # - folderinside: specific directory (in source of a ccm cfs) where directly get the files
 #
 # the input of this script is the history of a project
