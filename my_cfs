@@ -62,7 +62,7 @@ my ($delname, $delversion, $delctype, $delinstance);
 # if an object is encountered more than once, the second occurence is replaced by a symlink
 my %encountered_objects;
 
-dump_tree('', $top_objectname, '');
+dump_tree('', $top_objectname, '') or die ("unable to find $top_objectname");
 
 sub dump_tree {
     # relpath is destination directory (relative to $root), either empty or has a trailing /
@@ -71,6 +71,11 @@ sub dump_tree {
     make_path("$root/$relpath");
     print STDERR "Dumping tree $top_objectname $subpath toward $relpath\n" if ($verbose);
     my @ls = git_show(object_name_to_path($top_objectname) . "/${subpath}ls");
+
+    if ($#ls < 0) {
+        return 0;
+    }
+
 
     # subprojects are processed after the content of project, but their location is memorized first
     my @subprojects = grep {(parse_object_name($_))[2] eq 'project'} @ls;
@@ -113,6 +118,8 @@ sub dump_tree {
             dump_tree("${relpath}$name/", $proj, "$name/");
         }
     }
+
+    return 1;
 }
 
 sub createsymlink {
