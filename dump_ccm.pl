@@ -10,26 +10,40 @@ use File::Basename qw(basename);
 use Cwd qw(realpath);
 use Data::Dumper;
 
+my $filter_products = '';
+my $include_prep = 0;
+
 # name of the synergy database (for example arh)
+START:
 my $synergy_db = shift @ARGV;
+# parameter -noprod avoids dump of product objects
+if (defined $synergy_db and $synergy_db eq '-noprod') {
+    # beware that "not is_product=TRUE" is not the same as "is_product=FALSE" because is_product is undefined for most of the objects
+    $filter_products = 'and not is_product=TRUE';
+    goto START;
+# parameter -prep allows projects in prep state to be dumped
+} elsif (defined $synergy_db and $synergy_db eq '-prep') {
+    $include_prep = 1;
+    goto START;
+}
 # absolute path toward the git repository
 my $root_dir = shift @ARGV;
 
 unless ($synergy_db && $root_dir) {
-    print STDERR "USAGE: $0 <synergy_db_name> <dump_dir_path>\n";
+    print STDERR "USAGE: $0 [-noprod] [-prep] <synergy_db_name> <dump_dir_path>\n";
     exit 1;
 }
 
 &connect();
 
-# step 1: query all objects (not is_product)
+
+# step 1: query all objects (not is_product if -noprod is specified)
 my %objs;
 if (-e 'all_obj.dump') {
     my $VAR1 = do 'all_obj.dump';
     %objs = %$VAR1;
 } else {
-  # beware that "not is_product=TRUE" is not the same as "is_product=FALSE" because is_product is undefined for most of the objects
-  %objs = &ccm_query_with_retry('all_obj', '%objectname %status %owner %release %task %{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}', "type match '*'");
+  %objs = &ccm_query_with_retry('all_obj', '%objectname %status %owner %release %task %{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}', "type match '*' $filter_products");
 }
 
 # remove entries where objectname contains /
@@ -61,7 +75,7 @@ if (-e $filename) {
 
         # skip what can not be dumped
         next if $ctype =~ m/^(task|releasedef|folder|tset|dir|baseline|process_rule)$/;
-
+        
         my $path = "${ctype}/${name}/${instance}/${version}";
         make_path($path) or die "Can't mkdir -p $path: $!" unless -d $path;
         my $hash_content = "";
@@ -110,7 +124,7 @@ if (-e $filename_not) {
 open (my $filex_not, '>>', $filename_not) or die "Can't append to $filename_not: $!";
 
 
-# step 4 recursive ls of each baselined projects
+# step 4 recursive ls of each baselined projects (status is released or prep)
 # if process is stoped during extraction of a project, the work area shall be removed
 # manually and the file "ls" in the top directory shall be removed so that it is started again at next start:
 #   rm ../arh_repo/project/Oasis_Component_Model/ARH#1/ACE2005B_V0.9/ls
@@ -122,7 +136,9 @@ system ("rm -rf *-tempo*");
 foreach my $k (sort keys %objs) {
     my ($name, $version, $ctype, $instance) = parse_object_name($k);
     next if $ctype ne 'project';
-    next if $objs{$k}->{'Status'} ne 'released';
+    if ($objs{$k}->{'Status'} ne 'released') {
+        next if ($include_prep == 0) || $objs{$k}->{'Status'} ne 'prep';
+    }
 
     if (-e "$root_dir/${ctype}/${name}/${instance}/${version}/ls") {
         print "Skip project $k already dumped\n";
@@ -185,7 +201,6 @@ foreach my $k (sort keys %objs) {
 close $filex;
 close $filex_not;
 
-
 # split the four part objectname even in edge cases (names containing dash or separated from version using colon instead of dash)
 sub parse_object_name {
     my $objectname = shift;
@@ -219,7 +234,7 @@ sub connect {
    }
 }
 
-#
+# 
 sub ccm_query_with_retry {
     my @args = @_;
     while (1) {
@@ -305,3 +320,5 @@ sub ccm_query {
     close $dest;
     return %res;
 }
+
+
