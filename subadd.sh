@@ -113,7 +113,7 @@ cat /tmp/subadd_status.$$.tmp | grep " D " | sed 's/^ *[^ ]* *//' | while read p
 done | grep ';' >> /tmp/subadd_tasks.$$.tmp
 
 # foreach create_time, owner, task, path and md5sum (sorted by date). A dummy line "#_END_" is read at the last iteration.
-cat /tmp/subadd_tasks.$$.tmp | awk -F ';' '{print $8";"$6";"$7";"$1";"$2}END{print "#_END_ "}' | sort | while read date auteur task path hash; do
+cat /tmp/subadd_tasks.$$.tmp | awk -F ';' '{print $8";"$5";"$7";"$1";"$2}END{print "#_END_ "}' | sort | while read date auteur task path hash; do
 	# if the task changes (or it is the #_END_), commit the previous group of changes
 	if test "$old" && ! test "$old" = "$auteur $task"; then
 		if ! test "$mycomment" ; then
