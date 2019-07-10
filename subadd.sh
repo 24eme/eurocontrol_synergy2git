@@ -27,26 +27,29 @@ fi
 
 # the second column of git status output is the list of modified, created or deleted files
 # the file /tmp/subadd_content.$$.tmp will contain the md5sum of all the files to be modified or created followed by spaces, then their full pathname.
-git status -s > /tmp/subadd_status.$$.tmp
+git status -s | sed 's/"//g' > /tmp/subadd_status.$$.tmp
+
+IFS=";"
 
 # retrieve content of each Modification
-cat /tmp/subadd_status.$$.tmp | grep -v " D " | awk '{print $2}' | while read path ; do
-	echo $(find $path -type f -exec git hash-object '{}' ';')";"$path
-done > /tmp/subadd_content.$$.tmp
+cat /tmp/subadd_status.$$.tmp | grep -v "^ D " | sed 's/^ *[^ ]* *//' | while read path ; do
+	find $path -type f | while read file ; do
+		echo $(git hash-object "$file")";"$file";" ;
+	done
+done > /tmp/subadd_content.$$.tmp ;
 # retrieve content of deletion (to retrieve all missing version between the deleted content and the current git content)
-cat /tmp/subadd_status.$$.tmp | grep " D " | awk '{print $2}' | while read path ; do
-	deletion_hash=$(git cat-file -p $(git ls-tree HEAD "$path" | cut -d " " -f 3 | sed -r 's/^([a-z0-9]+).+$/\1/')  | git hash-object /dev/stdin )
-	printf "$deletion_hash;$path;deletion"
+cat /tmp/subadd_status.$$.tmp | grep "^ D " | sed 's/^ *[^ ]* *//' | while read path ; do
+	find $path -type f | while read file ; do
+		deletion_hash=$(git ls-tree HEAD "$file" | awk '{print $3}')
+		printf "$deletion_hash;$file;deletion"
+	done
 done >> /tmp/subadd_content.$$.tmp
-
 
 # save all the changes to the stash. This revert the working tree to the last commit
 git stash > /dev/null
 
 # ensure we have write access
 chmod -R u+w .
-
-IFS=";"
 
 # for each md5sum and pathname in /tmp/subadd_content.$$.tmp
 cat /tmp/subadd_content.$$.tmp | while read hash path extra ; do
@@ -57,14 +60,14 @@ cat /tmp/subadd_content.$$.tmp | while read hash path extra ; do
 done | grep ';[a-f0-9]' | while read path newhash otherhash newid indbpath; do
 
 	# md5sum of the old file
-	oldhash=$(git hash-object  $path)
+	oldhash=$(git hash-object $path)
 	# objectname of the old file
 	oldid=$( git $dbargs show db:md5_obj.csv | grep $oldhash | awk -F ';' '{print $3}' | tail -n 1)
 	patholdmd5file=$indbpath
 	if ! test "$oldhash" = "$newhash" ; then
 		# use the script history4fileversions.pl to retrieve all the objectnames between $oldid and $newid ($newid is included but not $oldid thanks to the tail -n +2).
 		git $dbargs show "db:"$indbpath"/hist" | perl $path2bin"/history4fileversions.pl" "$oldid" "$newid" | tail -n +2 | while read versionid ; do
-			hash=$( git $dbargs show db:md5_obj.csv | grep $versionid | awk -F ';' '{print $1}' | head -n 1)
+			hash=$( git $dbargs show db:md5_obj.csv | grep "$versionid" | awk -F ';' '{print $1}' | head -n 1)
 			# the output is on 9 columns:
 			# - the path
 			# - the md5sum of the file
@@ -89,15 +92,24 @@ done | grep ';[a-f0-9]' | while read path newhash otherhash newid indbpath; do
 done | grep ';' > /tmp/subadd_tasks.$$.tmp
 
 #retrieve deletion task
-cat /tmp/subadd_status.$$.tmp | grep " D " | awk '{print $2}' | while read path ; do
-	deletion_hash=$(git cat-file -p $(git ls-tree HEAD "$path" | cut -d " " -f 3 | sed -r 's/^([a-z0-9]+).+$/\1/')  | git hash-object /dev/stdin )
-	deletion_id=$(git $dbargs show db:md5_obj.csv | grep $deletion_hash | awk -F ';' '{print $3}' | tail -n 1)
-	deletion_dirpath=$(git $dbargs grep  '^- '$deletion_id db | awk -F ':' '{print $1":"$2}' | sed 's|/ls|/id|' | head -n 1)
-	deletion_dirid=$(git $dbargs show $deletion_dirpath)
-	deletion_dirhash=$(git $dbargs show db:md5_obj.csv | grep $deletion_dirid | tail -n 1 | awk -F ';' '{print $1}')
-	echo -n $path";"$deletion_dirhash";" ;
-	git $dbargs show db:all_obj.csv | grep "$deletion_dirid" | head -n 1
-	echo ;
+cat /tmp/subadd_status.$$.tmp | grep " D " | sed 's/^ *[^ ]* *//' | while read path ; do
+	find "$path" -type f | while read file ; do
+		deletion_hash=$(git ls-tree HEAD "$file" | awk '{print $3}')
+		if test "$deletion_hash" ; then
+			deletion_id=$(git $dbargs show db:md5_obj.csv | grep "$deletion_hash" | awk -F ';' '{print $3}' | tail -n 1)
+		if test "$deletion_id" ; then
+			deletion_dirpath=$(git $dbargs grep  '^- '$deletion_id db | awk -F ':' '{print $1":"$2}' | sed 's|/ls|/id|' | head -n 1)
+		if test "$deletion_dirpath" ; then
+			deletion_dirid=$(git $dbargs show $deletion_dirpath)
+			deletion_dirhash=$(git $dbargs show db:md5_obj.csv | grep $deletion_dirid | tail -n 1 | awk -F ';' '{print $1}')
+			echo "deletion - $deletion_hash - $deletion_id - $deletion_dirpath - $deletion_dirid - $deletion_dirhash " >&2
+			echo -n $file";"$deletion_dirhash";" ;
+			git $dbargs show db:all_obj.csv | grep "$deletion_dirid" | head -n 1
+		fi
+		fi
+		fi
+		echo ;
+	done
 done | grep ';' >> /tmp/subadd_tasks.$$.tmp
 
 # foreach create_time, owner, task, path and md5sum (sorted by date). A dummy line "#_END_" is read at the last iteration.
