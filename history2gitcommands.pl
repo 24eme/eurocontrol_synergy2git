@@ -17,15 +17,14 @@ $folder = shift;
 $folder = "repo" if (!$folder);
 $folder_repo = $folder."_repo";
 $folder_src = $folder."_src";
-$ccm_cmd = shift;
-$ccm_cmd = "ccm" if (!$ccm_cmd);
-$subadds = shift;
+$gitdbdump_path = shift;
 $folderinside = shift;
 $folderinside = "" if (!$folderinside);
 
 # parse stdin (the history of a project)
 use File::Basename;
-$_dir_ = dirname(__FILE__);
+use Cwd qw(realpath);
+$_dir_ = realpath(dirname(__FILE__));
 require $_dir_."/history.pm";
 
 # Replace all the # and : characters in the objectname by underscores. This sanitization ensures
@@ -57,27 +56,30 @@ sub followtree {
   # before execution of this script the following settings shall be adjust on work area:
   #  - Place work area relative to parent projects's
   #  - File Options: copies
-  print "$ccm_cmd \"$key\"\n";
+  print "if ".$_dir_."/my_cfs \"$gitdbdump_path\"  \"$key\" ; then \n";
   # for each link toward a directory in $folder_src, replace it be a copy of the directory tree pointed by the link
   print 'find . -type l | while read link ; do if test -d "$link"; then source=$(readlink "$link"); if test -d "$source" ; then rm "$link" ; cd $(dirname $link) ; rsync -a "$source" . ; cd - ; fi ; fi ; done'."\n";
-  #Hack to avoid spaces 
-  print "find . -name '* *'  | perl -e 'while (<STDIN>) { chomp; next unless(\$_); \$e=\$_; \$e =~ s/ /_/g ; rename \$_, \$e ; }'\n";
+  # create an empty file named .empty in all directories that are empty so that they can be stored in git
+  print "find . -type d -empty -exec touch '{}'/.empty ';'\n";
+  #Hack to avoid spaces
+  #print "find . -name '* *'  | perl -e 'while (<STDIN>) { chomp; next unless(\$_); \$e=\$_; \$e =~ s/ /_/g ; rename \$_, \$e ; }'\n";
   print "cd ..\n";
   # empty the working tree (removes everything except .git directory and .gitignore file)
   print "rm -rf $folder_repo/*\n";
   # copy from the directory where the synergy extraction has occurred toward git working tree
   print "rsync -a $folder_src/$folderinside/ $folder_repo\n";
   print "cd $folder_repo\n";
-  # create an empty file named .empty in all directories that are empty so that they can be stored in git
-  print "find . -type d -empty -exec touch '{}'/.empty ';'\n";
   # optionally, call the script $subadds. This script is in charge of creating intermediate commits related to synergy's tasks
-  print "$subadds \n" if ($subadds);
+  print "bash ".$_dir_."/subadd.sh \"$gitdbdump_path\"\n";
+  print "git reset HEAD . \n";
+  print "rsync -a ../$folder_src/$folderinside/ .\n";
   # put on the stage all the removed, modified or created files of the working tree
   print "git add -A .\n";
   # commit even if the tree is identical to the tree of previous commit
   print "GIT_COMMITTER_DATE=\"$cdate\" git commit --allow-empty --author \"$cauthor\" --date \"$cdate\" -m \"$ccomment (imported via git2synergy)\"\n";
   # associates as tag of this commit, the objectname (sanitized) of the project's version
   print "git tag $cbranch\n";
+  print "fi ;\n" ;
   # progression information of stderr
   print STDERR "$tirets $key\n";
   # recursive call for each successor of current version of project
