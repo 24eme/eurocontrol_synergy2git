@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-eval 'exec /usr/bin/perl -S $0 ${1+"$@"}'
-if 0; #$running_under_some_shell
+    eval 'exec /usr/bin/perl -S $0 ${1+"$@"}'
+        if 0; #$running_under_some_shell
 
 use strict;
 use warnings;
@@ -10,8 +10,22 @@ use File::Basename qw(basename dirname);
 use Cwd qw(realpath);
 use Data::Dumper;
 
+my $filter_products = '';
+my $include_prep = 0;
+
 # name of the synergy database (for example arh)
+START:
 my $synergy_db = shift @ARGV;
+# parameter -noprod avoids dump of product objects
+if (defined $synergy_db and $synergy_db eq '-noprod') {
+    # beware that "not is_product=TRUE" is not the same as "is_product=FALSE" because is_product is undefined for most of the objects
+    $filter_products = 'and not is_product=TRUE';
+    goto START;
+# parameter -prep allows projects in prep state to be dumped
+} elsif (defined $synergy_db and $synergy_db eq '-prep') {
+    $include_prep = 1;
+    goto START;
+}
 # absolute path toward the git repository
 my $root_dir = realpath(shift @ARGV);
 my $bin_dir = realpath(dirname($0));
@@ -40,6 +54,7 @@ map {delete $objs{$_};} grep {/\//} keys %objs;
 # remove entrie of temporairy objects
 map {delete $objs{$_};} grep {/-temp/} keys %objs;
 print "Objs finished\n";
+
 
 # step 2: query all tasks
 my %tasks;
@@ -70,7 +85,7 @@ if (-e $filename) {
         make_path($path) or die "Can't mkdir -p $path: $!" unless -d $path;
         my $hash_content = "";
         my $hash_hist    = "";
-        if ($ctype !~ m/^(project|symlink|dir)$/) {
+        if ($ctype !~ m/^(project|symlink|dir|dcmdbdef|folder_temp|project_grouping|saved_query|processdef)$/) {
             system ("ccm cat '$k' > '$path/content'") == 0  or warn ("Can't cat $k\n");
             $hash_content = `git hash-object '$path/content'`;
         }elsif($ctype eq 'dir') {
@@ -102,14 +117,19 @@ system ("rm -rf *-tempo*");
 foreach my $k (sort keys %objs) {
     my ($name, $version, $ctype, $instance) = parse_object_name($k);
     next if $ctype ne 'project';
+    if ($objs{$k}->{'Status'} ne 'released') {
+        next if ($include_prep == 0) || $objs{$k}->{'Status'} ne 'prep';
+    }
 
     if (-e "$root_dir/${ctype}/${name}/${instance}/${version}/ls") {
         print "Skip project $k already dumped\n";
         next;
     }
+  START:
     print "Creating a wa of $k\n";
 
-    if (system("ccm cp -t tempo$$ -no_u -scope project_only -setpath $wa_dir $k") != 0) {
+    # create a copy of a project with a working area (link based) and no_update
+    if (system("ccm cp -t tempo$$ -no_u -lb -scope project_only -setpath $wa_dir $k") != 0) {
         warn "ccm cp failed for $k skip it for the moment\n";
         next;
     }
@@ -124,19 +144,46 @@ foreach my $k (sort keys %objs) {
     foreach my $dir (@all_dirs) {
         my $git_path = "$root_dir/${ctype}/${name}/${instance}/${version}/$dir";
         make_path($git_path);
-        my @ls = `ccm ls $dir -f '%objectname' | tee ${git_path}/ls`;
+        my @ls = `ccm ls "$dir" -f '%objectname' | tee "${git_path}/ls"`;
         # if a symlink is encountered, memorize its value
         foreach my $file (@ls) {
             chomp $file;
             next if $file eq '';
             my ($fname, $fversion, $fctype, $finstance) = parse_object_name($file);
-            next unless $fctype eq 'symlink';
-            `readlink $dir/$fname > $root_dir/${fctype}/${fname}/${finstance}/${fversion}/content`;
+            if ($fctype eq 'symlink') {
+                `readlink "$dir/$fname" > "$root_dir/${fctype}/${fname}/${finstance}/${fversion}/content"`;
+            } elsif ($fctype ne 'dir' and $fctype ne 'project') {
+                # if a file is encountered memorize its permissions (executable or not)
+                if ((not exists $exec_obj{$file})) {
+                    if ((-l "$dir/$fname" && -x readlink("$dir/$fname"))
+                        or -x "$dir/$fname") {
+                        $exec_obj{$file}++;
+                        print $filex "$file\n";
+                    } else {
+                        $not_exec_obj{$file}++;
+                        print $filex_not "$file\n";
+                    }
+                }
+            }
         }
     }
     chdir ('..');
-    system("ccm delete '$prj'") == 0 or die "ccm delete failed for $prj";
+    # delete the project
+    if (system("ccm delete '$prj'") != 0) {
+        warn "ccm delete failed for $prj\n";
+        &connect();
+        if (system("ccm delete '$prj'") != 0) {
+            warn "ccm delete failed twice for $prj\n";
+            system ("rm -rf $wa_dir/*");
+        }
+        # in case of problems, restart the dump of the last project
+        goto START;
+    }
+    # clean the .moved directory
+    system("rm -rf $ENV{HOME}/ccm_wa/.moved/$synergy_db/*");
 }
+close $filex;
+close $filex_not;
 
 chdir ($root_dir);
 
@@ -306,11 +353,35 @@ sub ccm_query {
     my @titles;
     my $inside = 1;
     #print "ch=$ch\n";
-    @titles = split(/\s\s+/, $ch);
+    foreach my $i (1..length($ch)) {
+        my $is_space = substr($ch, $i, 1) =~ m/ |\n/;
+        if ($inside) {
+            if ($is_space) {
+                push @ends, $i-1;
+                my $s = substr($ch, $starts[$#starts], $i-$starts[$#starts]);
+                push @titles, $s;
+                #print "title ", $titles[$#titles], " $s $starts[$#starts] $i \n";
+                $inside = 0;
+            }
+        } else {
+            if (!$is_space) {
+                $inside = 1;
+                push @starts, $i;
+                #print "push starts $starts[$#starts]\n";
+            }
+        }
+    }
+    my @lengths = map {$starts[$_] - $starts[$_-1]} 1..$#titles;
+    push @lengths, -1;
     while (my $line = <$cmd>) {
         chomp($line);
         my %record;
-        my @fields = split(/\s\s+/, $line);
+        my @fields;
+        foreach my $i (0..$#titles) {
+            my $field = substr($line, $starts[$i], $lengths[$i]);
+            $field =~ s/\s+$//;
+            push @fields, $field;
+        }
         #print join(';', @fields), "\n";
         print $dest join(';', @fields), "\n";
         foreach my $i (1..$#titles) {
