@@ -40,6 +40,12 @@ sub key2tagname {
 
 sub followtree {
   my ($key, $tirets) = @_;
+  my $status = `ccm attr -s status -p $key`;
+  chomp ($status);
+  # Migrate only "released" or "integrate" projects
+  if (($status ne "released") && ($status ne "integrate")) {
+     return;
+  }
   my $cauthor, $cdate, $ccomment, $cpredecessor, $cbranch;
   $cbranch = key2tagname($key);
   $cpredecessor = key2tagname($objects{$key}{"Predecessors"}[0]);
@@ -49,11 +55,11 @@ sub followtree {
   $cdate = $objects{$key}{"Created"};
   $ccomment = "Project $key - ".join(" ", @{$objects{$key}{"Comment"}})." - tasks: ".$objects{$key}{"Task"}." ";
   # reset the branch master to point to the commit of the previous version of project
-  print "git checkout -B master tags/$cpredecessor\n";
+  print "git checkout -b master tags/$cpredecessor\n";
   print "cd ..\n";
   # empty the directory that will be used for synergy extraction
   print "rm -rf $folder_src\n";
-  print "mkdir $folder_src\n";
+  print "mkdir -p $folder_src\n";
   # synergy recursive copy of a project to file system (in directory $folder_src)
   # before execution of this script the following settings shall be adjust on work area:
   #  - Place work area relative to parent projects's
@@ -88,15 +94,18 @@ sub followtree {
   }
 }
 # initialize the git repository
-print("mkdir $folder\n");
+print("mkdir -p $folder\n");
 print("cd $folder\n");
-print("mkdir $folder_repo\n");
-print("mkdir $folder_src\n");
+print("mkdir -p $folder_repo\n");
 print("cd $folder_repo\n");
 print("rm -rf .git *\n");
 print("git init\n");
 print("printf \"# $title \\n\\nrepository generated automaticaly\\n\" > README.md\n");
 print("git add README.md\n");
+# keep .gitignore file if exist in parent directory
+print ("if [ -f '../.gitignore' ];then\ncp ../.gitignore .\nfi\n");
+# or if exist inside directory $folder_repo
+print ("if [ -f '.gitignore' ];then\ngit add .gitignore\nfi\n");
 print("GIT_COMMITTER_DATE=\"Mon Jan  1 00:00:00 CET 1990\" git commit --date=\"Mon Jan  1 00:00:00 CET 1990\" --author=\"synergy2git <contact@24eme.fr>\" -m \"initial commit\"\n");
 print("git tag initial_commit\n");
 # for each version of the project that have no ancestor
