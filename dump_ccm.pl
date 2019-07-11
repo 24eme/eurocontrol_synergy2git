@@ -10,26 +10,40 @@ use File::Basename qw(basename);
 use Cwd qw(realpath);
 use Data::Dumper;
 
+my $filter_products = '';
+my $include_prep = 0;
+
 # name of the synergy database (for example arh)
+START:
 my $synergy_db = shift @ARGV;
+# parameter -noprod avoids dump of product objects
+if (defined $synergy_db and $synergy_db eq '-noprod') {
+    # beware that "not is_product=TRUE" is not the same as "is_product=FALSE" because is_product is undefined for most of the objects
+    $filter_products = 'and not is_product=TRUE';
+    goto START;
+# parameter -prep allows projects in prep state to be dumped
+} elsif (defined $synergy_db and $synergy_db eq '-prep') {
+    $include_prep = 1;
+    goto START;
+}
 # absolute path toward the git repository
 my $root_dir = shift @ARGV;
 
 unless ($synergy_db && $root_dir) {
-    print STDERR "USAGE: $0 <synergy_db_name> <dump_dir_path>\n";
+    print STDERR "USAGE: $0 [-noprod] [-prep] <synergy_db_name> <dump_dir_path>\n";
     exit 1;
 }
 
 &connect();
 
-# step 1: query all objects (not is_product)
+
+# step 1: query all objects (not is_product if -noprod is specified)
 my %objs;
 if (-e 'all_obj.dump') {
     my $VAR1 = do 'all_obj.dump';
     %objs = %$VAR1;
 } else {
-  # beware that "not is_product=TRUE" is not the same as "is_product=FALSE" because is_product is undefined for most of the objects
-  %objs = &ccm_query_with_retry('all_obj', '%objectname %status %owner %release %task %{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}', "type match '*'");
+  %objs = &ccm_query_with_retry('all_obj', '%objectname %status %owner %release %task %{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}', "type match '*' $filter_products");
 }
 
 # remove entries where objectname contains /
@@ -61,12 +75,12 @@ if (-e $filename) {
 
         # skip what can not be dumped
         next if $ctype =~ m/^(task|releasedef|folder|tset|dir|baseline|process_rule)$/;
-
+        
         my $path = "${ctype}/${name}/${instance}/${version}";
         make_path($path) or die "Can't mkdir -p $path: $!" unless -d $path;
         my $hash_content = "";
         my $hash_hist    = "";
-        if ($ctype !~ m/^(project|symlink)$/) {
+        if ($ctype !~ m/^(project|symlink|dcmdbdef|folder_temp|project_grouping|saved_query|processdef)$/) {
             system ("ccm cat '$k' > '$path/content'") == 0  or warn ("Can't cat $k\n");
             $hash_content = `git hash-object '$path/content'`;
         }
@@ -83,27 +97,58 @@ if (-e $filename) {
 }
 
 
-# step 4 recursive ls of each baselined projects
+# exec_obj.csv contains the list of objectname that have been identified as executables.
+$filename = "$root_dir/exec_obj.csv";
+my %exec_obj;
+if (-e $filename) {
+    print "reading $filename\n";
+    open (my $file, '<', $filename) or die "Can't read $filename: $!";
+    while (my $line = <$file>) {
+        chomp $line;
+        $exec_obj{$line}++;
+    }
+}
+open (my $filex, '>>', $filename) or die "Can't append to $filename: $!";
+
+# not_exec_obj.csv contains the list of objectname that have been identified as not executables.
+my $filename_not = "$root_dir/not_exec_obj.csv";
+my %not_exec_obj;
+if (-e $filename_not) {
+    print "reading $filename_not\n";
+    open (my $file, '<', $filename_not) or die "Can't read $filename_not: $!";
+    while (my $line = <$file>) {
+        chomp $line;
+        $not_exec_obj{$line}++;
+    }
+}
+open (my $filex_not, '>>', $filename_not) or die "Can't append to $filename_not: $!";
+
+
+# step 4 recursive ls of each baselined projects (status is released or prep)
 # if process is stoped during extraction of a project, the work area shall be removed
 # manually and the file "ls" in the top directory shall be removed so that it is started again at next start:
 #   rm ../arh_repo/project/Oasis_Component_Model/ARH#1/ACE2005B_V0.9/ls
 #   ccm delete Oasis_Component_Model-tempo3368
-my $wa_dir = realpath("$root_dir/../tmp");
+my $wa_dir = realpath("$root_dir/../tmp$$");
 make_path($wa_dir);
 chdir $wa_dir or die "Can't chdir $wa_dir: $!";
 system ("rm -rf *-tempo*");
 foreach my $k (sort keys %objs) {
     my ($name, $version, $ctype, $instance) = parse_object_name($k);
     next if $ctype ne 'project';
-    next if $objs{$k}->{'Status'} ne 'released';
+    if ($objs{$k}->{'Status'} ne 'released') {
+        next if ($include_prep == 0) || $objs{$k}->{'Status'} ne 'prep';
+    }
 
     if (-e "$root_dir/${ctype}/${name}/${instance}/${version}/ls") {
         print "Skip project $k already dumped\n";
         next;
     }
+  START:
     print "Creating a wa of $k\n";
 
-    if (system("ccm cp -t tempo$$ -no_u -scope project_only -setpath $wa_dir $k") != 0) {
+    # create a copy of a project with a working area (link based) and no_update
+    if (system("ccm cp -t tempo$$ -no_u -lb -scope project_only -setpath $wa_dir $k") != 0) {
         warn "ccm cp failed for $k skip it for the moment\n";
         next;
     }
@@ -115,19 +160,46 @@ foreach my $k (sort keys %objs) {
     foreach my $dir (@all_dirs) {
         my $git_path = "$root_dir/${ctype}/${name}/${instance}/${version}/$dir";
         make_path($git_path);
-        my @ls = `ccm ls $dir -f '%objectname' | tee ${git_path}/ls`;
+        my @ls = `ccm ls "$dir" -f '%objectname' | tee "${git_path}/ls"`;
         # if a symlink is encountered, memorize its value
         foreach my $file (@ls) {
             chomp $file;
             next if $file eq '';
             my ($fname, $fversion, $fctype, $finstance) = parse_object_name($file);
-            next unless $fctype eq 'symlink';
-            `readlink $dir/$fname > $root_dir/${fctype}/${fname}/${finstance}/${fversion}/content`;
+            if ($fctype eq 'symlink') {
+                `readlink "$dir/$fname" > "$root_dir/${fctype}/${fname}/${finstance}/${fversion}/content"`;
+            } elsif ($fctype ne 'dir' and $fctype ne 'project') {
+                # if a file is encountered memorize its permissions (executable or not)
+                if ((not exists $exec_obj{$file})) {
+                    if ((-l "$dir/$fname" && -x readlink("$dir/$fname"))
+                        or -x "$dir/$fname") {
+                        $exec_obj{$file}++;
+                        print $filex "$file\n";
+                    } else {
+                        $not_exec_obj{$file}++;
+                        print $filex_not "$file\n";
+                    }
+                }
+            }
         }
     }
     chdir ('..');
-    system("ccm delete '$prj'") == 0 or die "ccm delete failed for $prj";
+    # delete the project
+    if (system("ccm delete '$prj'") != 0) {
+        warn "ccm delete failed for $prj\n";
+        &connect();
+        if (system("ccm delete '$prj'") != 0) {
+            warn "ccm delete failed twice for $prj\n";
+            system ("rm -rf $wa_dir/*");
+        }
+        # in case of problems, restart the dump of the last project
+        goto START;
+    }
+    # clean the .moved directory
+    system("rm -rf $ENV{HOME}/ccm_wa/.moved/$synergy_db/*");
 }
+close $filex;
+close $filex_not;
 
 # split the four part objectname even in edge cases (names containing dash or separated from version using colon instead of dash)
 sub parse_object_name {
@@ -162,7 +234,7 @@ sub connect {
    }
 }
 
-#
+# 
 sub ccm_query_with_retry {
     my @args = @_;
     while (1) {
@@ -248,3 +320,5 @@ sub ccm_query {
     close $dest;
     return %res;
 }
+
+
