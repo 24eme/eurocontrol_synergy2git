@@ -363,7 +363,7 @@ sub ccm_query($\@$) {
     open my $dest, '>', $filename or die "Can't write $filename: $!";
     my $qformat = join('||', @format);
     $qformat =~ s/'/'"'"'/g; # see https://stackoverflow.com/questions/24868950/perl-escaping-argument-for-bash-execution
-    my $query = "ccm query -u -ch";
+    my $query = "ccm query -u";
     if (defined $filter) {
         if ($filter =~ m/^-t/) {
             $query .= " $filter";
