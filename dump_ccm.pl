@@ -50,7 +50,7 @@ if (-e 'all_obj.dump') {
     %objs = %$VAR1;
 } else {
     # beware that "not is_product=TRUE" is not the same as "is_product=FALSE" because is_product is undefined for most of the objects
-    %objs = &ccm_query_with_retry('all_obj', '%objectname %status %owner %release %task %{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}', "type match '*' $filter_products");
+    %objs = &ccm_query_with_retry('all_obj', ['%objectname', '%status', '%owner', '%release', '%task', '%{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}'], "type match '*' $filter_products");
 }
 
 # remove entries where objectname contains /
@@ -66,10 +66,9 @@ if (-e 'all_task.dump') {
     my $VAR1 = do 'all_task.dump';
     %tasks = %$VAR1;
 } else {
-    %tasks = &ccm_query_with_retry('all_task', '%displayname %release %task_synopsis', '-t task');
+    %tasks = &ccm_query_with_retry('all_task', ['%displayname', '%release', '%task_synopsis'], '-t task');
 }
 print "Tasks finished\n";
-
 
 # step 3: dump all objects and keep their hash (and the hash of their history)
 my $filename = "$root_dir/md5_obj.csv";
@@ -223,7 +222,7 @@ foreach my $k (sort keys %objs) {
     my ($name, $version, $ctype, $instance) = parse_object_name($k);
     next if $ctype ne 'dir';
     foreach my $fullproject ( projects_containing_an_object($k) ) {
-        my %content = &ccm_query_with_retry('dir_content', '%objectname %release', "is_child_of(\"$k\", \"$fullproject\")");
+        my %content = &ccm_query_with_retry('dir_content', ['%objectname', '%release'], "is_child_of(\"$k\", \"$fullproject\")");
         my %res;
         my $ls;
         if (-f "$root_dir/${ctype}/${name}/${instance}/${version}/ls") {
@@ -336,10 +335,12 @@ sub connect {
 }
 
 #
-sub ccm_query_with_retry {
-    my @args = @_;
+sub ccm_query_with_retry($\@$) {
+    my $name = shift;
+    my $format = shift;
+    my $filter = shift;
     while (1) {
-        my %res = eval { ccm_query(@args); };
+        my %res = eval { ccm_query($name, $format, $filter); };
         if ($@) {
             warn "ccm_query failed $@\nretry\n";
             &connect();
@@ -352,11 +353,16 @@ sub ccm_query_with_retry {
 # as queries were performed using the qualifier "-ch" that forces formating in columns, I have used that formating
 # to perform splitting in columns
 # Result of queries is returned as a hash and also stored in a csv file and a perl dump.
-sub ccm_query {
-    my ($name, $format, $filter) = @_;
+sub ccm_query($\@$) {
+    my $name = shift;
+    my $format = shift;
+    my $filter = shift;
+    my @format = @{$format};
+
     my $filename = "$root_dir/${name}.csv";
     open my $dest, '>', $filename or die "Can't write $filename: $!";
-    $format =~ s/'/'"'"'/g; # see https://stackoverflow.com/questions/24868950/perl-escaping-argument-for-bash-execution
+    my $qformat = join('||', @format);
+    $qformat =~ s/'/'"'"'/g; # see https://stackoverflow.com/questions/24868950/perl-escaping-argument-for-bash-execution
     my $query = "ccm query -u -ch";
     if (defined $filter) {
         if ($filter =~ m/^-t/) {
@@ -366,54 +372,24 @@ sub ccm_query {
             $query .= " '$filter'";
         }
     }
-    $query .= " -f '$format'";
+    $query .= " -f '$qformat'";
     print "query: $query\n";
+
+    my @titles;
+    foreach my $atitle (@format) {
+        $atitle =~ s/^%\{?//;
+        $atitle =~ s/[\[\{].*//;
+        push @titles, $atitle;
+    }
+
     my %res;
     open my $cmd, "$query |" or die "Can't exec ccm query command: $!";
     #open my $cmd, '<', "queries/${name}.txt" or die "Can't exec queries/${name}.txt: $!";
-    my $ch = <$cmd>;
-    chomp $ch if ($ch);
-    unless ($ch) {
-        close $cmd;
-        my $exit_status = $? >> 8;
-        die "Bad exit status $exit_status" if ($exit_status && $exit_status != 6);
-        return %res;
-    }
-    my @starts = (0);
-    my @ends;
-    my @titles;
-    my $inside = 1;
-    #print "ch=$ch\n";
-    foreach my $i (1..length($ch)) {
-        my $is_space = substr($ch, $i, 1) =~ m/ |\n/;
-        if ($inside) {
-            if ($is_space) {
-                push @ends, $i-1;
-                my $s = substr($ch, $starts[$#starts], $i-$starts[$#starts]);
-                push @titles, $s;
-                #print "title ", $titles[$#titles], " $s $starts[$#starts] $i \n";
-                $inside = 0;
-            }
-        } else {
-            if (!$is_space) {
-                $inside = 1;
-                push @starts, $i;
-                #print "push starts $starts[$#starts]\n";
-            }
-        }
-    }
-    my @lengths = map {$starts[$_] - $starts[$_-1]} 1..$#titles;
-    push @lengths, -1;
     while (my $line = <$cmd>) {
+        next unless ($line =~ /\|\|/);
         chomp($line);
         my %record;
-        my @fields;
-        foreach my $i (0..$#titles) {
-            my $field = substr($line, $starts[$i], $lengths[$i]);
-            $field =~ s/\s+$//;
-            push @fields, $field;
-        }
-        #print join(';', @fields), "\n";
+        my @fields = split(/\|\|/, $line);
         print $dest join(';', @fields), "\n";
         foreach my $i (1..$#titles) {
             $record{$titles[$i]} = $fields[$i];
