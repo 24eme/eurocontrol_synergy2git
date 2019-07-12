@@ -27,11 +27,15 @@ if (defined $synergy_db and $synergy_db eq '-noprod') {
     goto START;
 }
 # absolute path toward the git repository
-my $root_dir = realpath(shift @ARGV);
-my $bin_dir = realpath(dirname($0));
+my $root_dir;
+my $bin_dir;
+if ($#ARGV > 1) {
+    $root_dir = realpath(shift @ARGV);
+    $bin_dir = realpath(dirname($0));
+}
 
-unless ($synergy_db && $root_dir) {
-    print STDERR "USAGE: $0 <synergy_db_name> <dump_dir_path>\n";
+unless (defined $synergy_db && defined $root_dir) {
+    print STDERR "USAGE: $0 [-noprod] [-prep] <synergy_db_name> <dump_dir_path>\n";
     exit 1;
 }
 
@@ -39,14 +43,14 @@ unless ($synergy_db && $root_dir) {
 
 chdir ($root_dir);
 
-# step 1: query all objects (not is_product)
+# step 1: query all objects (not is_product if -noprod is specified)
 my %objs;
 if (-e 'all_obj.dump') {
     my $VAR1 = do 'all_obj.dump';
     %objs = %$VAR1;
 } else {
     # beware that "not is_product=TRUE" is not the same as "is_product=FALSE" because is_product is undefined for most of the objects
-    %objs = &ccm_query_with_retry('all_obj', '%objectname %status %owner %release %task %{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}', "type match '*'");
+    %objs = &ccm_query_with_retry('all_obj', '%objectname %status %owner %release %task %{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}', "type match '*' $filter_products");
 }
 
 # remove entries where objectname contains /
@@ -105,12 +109,39 @@ if (-e $filename) {
 }
 
 
-# step 4 recursive ls of each baselined projects
+# exec_obj.csv contains the list of objectname that have been identified as executables.
+$filename = "$root_dir/exec_obj.csv";
+my %exec_obj;
+if (-e $filename) {
+    print "reading $filename\n";
+    open (my $file, '<', $filename) or die "Can't read $filename: $!";
+    while (my $line = <$file>) {
+        chomp $line;
+        $exec_obj{$line}++;
+    }
+}
+open (my $filex, '>>', $filename) or die "Can't append to $filename: $!";
+
+# not_exec_obj.csv contains the list of objectname that have been identified as not executables.
+my $filename_not = "$root_dir/not_exec_obj.csv";
+my %not_exec_obj;
+if (-e $filename_not) {
+    print "reading $filename_not\n";
+    open (my $file, '<', $filename_not) or die "Can't read $filename_not: $!";
+    while (my $line = <$file>) {
+        chomp $line;
+        $not_exec_obj{$line}++;
+    }
+}
+open (my $filex_not, '>>', $filename_not) or die "Can't append to $filename_not: $!";
+
+
+# step 4 recursive ls of each baselined projects (status is released or prep)
 # if process is stoped during extraction of a project, the work area shall be removed
 # manually and the file "ls" in the top directory shall be removed so that it is started again at next start:
 #   rm ../arh_repo/project/Oasis_Component_Model/ARH#1/ACE2005B_V0.9/ls
 #   ccm delete Oasis_Component_Model-tempo3368
-my $wa_dir = realpath("$root_dir/../tmp");
+my $wa_dir = realpath("$root_dir/../tmp$$");
 make_path($wa_dir);
 chdir $wa_dir or die "Can't chdir $wa_dir: $!";
 system ("rm -rf *-tempo*");
