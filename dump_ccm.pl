@@ -147,7 +147,7 @@ system ("rm -rf *-tempo*");
 foreach my $k (sort keys %objs) {
     my ($name, $version, $ctype, $instance) = parse_object_name($k);
     next if $ctype ne 'project';
-    if (defined $objs{$k}->{'status'} &&: $objs{$k}->{'status'} ne 'released') {
+    if ($objs{$k}->{'status'} ne 'released') {
         next if ($include_prep == 0) || $objs{$k}->{'status'} ne 'prep';
     }
 
