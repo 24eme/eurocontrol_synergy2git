@@ -147,8 +147,8 @@ system ("rm -rf *-tempo*");
 foreach my $k (sort keys %objs) {
     my ($name, $version, $ctype, $instance) = parse_object_name($k);
     next if $ctype ne 'project';
-    if ($objs{$k}->{'Status'} ne 'released') {
-        next if ($include_prep == 0) || $objs{$k}->{'Status'} ne 'prep';
+    if (defined $objs{$k}->{'status'} &&: $objs{$k}->{'status'} ne 'released') {
+        next if ($include_prep == 0) || $objs{$k}->{'status'} ne 'prep';
     }
 
     if (-e "$root_dir/${ctype}/${name}/${instance}/${version}/ls") {
