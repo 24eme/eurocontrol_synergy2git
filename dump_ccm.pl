@@ -29,7 +29,7 @@ if (defined $synergy_db and $synergy_db eq '-noprod') {
 # absolute path toward the git repository
 my $root_dir;
 my $bin_dir;
-if ($#ARGV > 1) {
+if ($#ARGV > -1) {
     $root_dir = realpath(shift @ARGV);
     $bin_dir = realpath(dirname($0));
 }
