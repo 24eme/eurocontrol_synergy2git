@@ -44,6 +44,8 @@ unless (-f "./.git/refs/heads/db") {
     exit 2;
 }
 
+my %exec_obj = map {($_ => 1)} git_show('exec_obj.csv');
+
 foreach my $line (git_show('md5_obj.csv')) {
     my ($content, $hist, $obj) = split(';', $line);
     $obj2content{$obj} = $content;
@@ -98,6 +100,7 @@ sub dump_tree {
                 warn "no content for $file  for $relpath\n";
             } else {
                 `git cat-file blob $obj2content{$file} > "$root/${relpath}$name" 2> /dev/null || echo "ERROR: impossible to retreive $file ($obj2content{$file}) to $root/${relpath}$name" >&2`;
+                chmod (0755, "$root/${relpath}$name") if exists $exec_obj{$file};
             }
         } else {
             warn "$file not found for $relpath\n";
