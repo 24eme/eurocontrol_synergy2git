@@ -39,7 +39,7 @@ unless (-e "./.git") {
     print STDERR "ERROR: $path2gitdb isn't a git repo\n";
     exit 1;
 }
-unless (-f "./.git/refs/heads/db") {
+if (system('git branch --list db') != 0) {
     print STDERR "ERROR: the git repository ($path2gitdb) should have a db banch\n";
     exit 2;
 }
