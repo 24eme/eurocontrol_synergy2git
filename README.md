@@ -2,32 +2,31 @@
 
 Run the migration script :
 
-    ccm history <an_id> | perl history2gitcommands.pl <repo_path> | bash
+    ccm history <an_id> | perl history2gitcommands.pl <repo_path> <dump_git_repo> | bash
 
-If you don't has access to the ccm command, you can fake it (for example by a command that generate random content) :
+This command runs the advanced version of the history. It creates a commit per project (revision), but aswell a commit (or more) by tasks.
 
-    cat ccm_history.output | perl history2gitcommands.pl repo/ 'echo \$RANDOM > program.c #' | bash
+The intermediate commits between project/revision is done by ``subadd.sh``. This script retrieves all the changed files and, thanks to their git checksums, the releted versions and their links to tasks. Thanks to the tasks, the script recreates the commits.
+
 
 ## Dump all objects of a base
 
-    bash dump_ccm.sh <the_base> <path_to_dump>
+    perl dump_ccm.pl  <synergy_db_name> <dump_dir_path>
 
 The dump structure :
 
- - ``db/all_obj.csv`` : the csv of all objects description of the database
- - ``db/all_tasks.csv`` : the csv of all tasks of the database
- - ``db/all_projects.csv`` : the csv of all projects (revision) of the database
- - ``db/md5_obj.csv`` : the md5 and CMSynergy objectid of all the objects of the database
- - ``files/XX/YY/ZZZZZZZZZZZZZZZZZZZZZZZZZZZZ`` : the content of an object (XXYYZZZZZZZZZZZZZZZZZZZZZZZZZZZZ is the md5 of the content)
- - ``files/XX/YY/ZZZZZZZZZZZZZZZZZZZZZZZZZZZZ.history`` : the CMSynergy history of an object)
+ - ``all_obj.csv`` : the csv of all objects description of the database
+ - ``all_tasks.csv`` : the csv of all tasks of the database
+ - ``all_projects.csv`` : the csv of all projects (revision) of the database
+ - ``md5_obj.csv`` : the md5 and CMSynergy objectid of all the objects of the database
+ - ``ctype/name/instance/version/content`` : the content of an object
+ - ``ctype/name/instance/version/id`` : the synergy id
+ - ``ctype/name/instance/version/ls`` : the content of the object (for projects or directories)
 
 ## Advanced conversion
 
-An advanced version of the history is avaliable. It allows to create a commit per project (revision), but aswell a commit (or more) by tasks.
 
-The intermediate commits between project/revision is done by ``subadd.sh``. This script retrieves all the changed files and, thanks to their md5 checksums, the releted versions and their links to tasks. Thanks to the tasks, the script recreates the commits.
-
-    ccm history <version> | perl history2gitcommands.pl <repo_directory> "ccm" $PWD"/subadd.sh  <absolute_path_to_dump>/" <internal_path> | bash
+    .../subadd.sh  <absolute_path_to_dump>/" <internal_path> | bash
 
 ``<absolute_path_to_dump>`` is the dirctory generated thanks to ``dump_ccm.sh``.
 

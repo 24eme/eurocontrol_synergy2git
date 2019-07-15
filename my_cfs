@@ -18,17 +18,29 @@ use strict;
 use warnings;
 
 use File::Path qw(make_path);
+use Cwd qw(cwd);
 
 my %obj2content;
 my %obj2hist; # not used in this script
 my $verbose = 0;
 
+print STDERR "$0 "."@ARGV"."\n";
+
+my ($path2gitdb, $top_objectname, $delivery_objectname, @dep_names) = @ARGV;
+unless ($path2gitdb && $top_objectname){
+    print STDERR "USAGE $0 <path_to_git_db> <top_objectname>\n";
+    exit 4;
+}
+
+my $root = cwd();
+chdir($path2gitdb);
+
 unless (-e "./.git") {
-    print STDERR "Not in a git directory\n";
+    print STDERR "ERROR: $path2gitdb isn't a git repo\n";
     exit 1;
 }
 unless (-f "./.git/refs/heads/db") {
-    print STDERR "The git repository should have a db banch\n";
+    print STDERR "ERROR: the git repository ($path2gitdb) should have a db banch\n";
     exit 2;
 }
 
@@ -43,12 +55,6 @@ unless (keys(%obj2hist)."") {
     exit 3;
 }
 
-my ($root, $top_objectname, $delivery_objectname, @dep_names) = @ARGV;
-unless ($root && $top_objectname){
-    print STDERR "USAGE $0 <path_to_destination> <top_objectname>\n";
-    exit 4;
-}
-
 my %hdep_names = map {($_ => 1)} @dep_names;
 
 my ($delname, $delversion, $delctype, $delinstance);
@@ -56,7 +62,7 @@ my ($delname, $delversion, $delctype, $delinstance);
 # if an object is encountered more than once, the second occurence is replaced by a symlink
 my %encountered_objects;
 
-dump_tree('', $top_objectname, '');
+dump_tree('', $top_objectname, '') or die ("unable to find $top_objectname");
 
 sub dump_tree {
     # relpath is destination directory (relative to $root), either empty or has a trailing /
@@ -65,6 +71,11 @@ sub dump_tree {
     make_path("$root/$relpath");
     print STDERR "Dumping tree $top_objectname $subpath toward $relpath\n" if ($verbose);
     my @ls = git_show(object_name_to_path($top_objectname) . "/${subpath}ls");
+
+    if ($#ls < 0) {
+        return 0;
+    }
+
 
     # subprojects are processed after the content of project, but their location is memorized first
     my @subprojects = grep {(parse_object_name($_))[2] eq 'project'} @ls;
@@ -86,7 +97,7 @@ sub dump_tree {
             if ($obj2content{$file} eq '') { # this should hapen only for is_product objects. Normally obj2content does not exist for them.
                 warn "no content for $file  for $relpath\n";
             } else {
-                `git cat-file blob $obj2content{$file} > $root/${relpath}$name`;
+                `git cat-file blob $obj2content{$file} > "$root/${relpath}$name" 2> /dev/null || echo "ERROR: impossible to retreive $file ($obj2content{$file}) to $root/${relpath}$name" >&2`;
             }
         } else {
             warn "$file not found for $relpath\n";
@@ -107,6 +118,8 @@ sub dump_tree {
             dump_tree("${relpath}$name/", $proj, "$name/");
         }
     }
+
+    return 1;
 }
 
 sub createsymlink {
