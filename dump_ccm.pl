@@ -11,7 +11,7 @@ use Cwd qw(realpath);
 use Data::Dumper;
 
 my $filter_products = '';
-my $include_prep = 0;
+my $include_prep = 1;
 
 # name of the synergy database (for example arh)
 START:
@@ -22,8 +22,8 @@ if (defined $synergy_db and $synergy_db eq '-noprod') {
     $filter_products = 'and not is_product=TRUE';
     goto START;
 # parameter -prep allows projects in prep state to be dumped
-} elsif (defined $synergy_db and $synergy_db eq '-prep') {
-    $include_prep = 1;
+} elsif (defined $synergy_db and $synergy_db eq '-noprep') {
+    $include_prep = 0;
     goto START;
 }
 # absolute path toward the git repository
@@ -35,7 +35,7 @@ if ($#ARGV > -1) {
 }
 
 unless (defined $synergy_db && defined $root_dir) {
-    print STDERR "USAGE: $0 [-noprod] [-prep] <synergy_db_name> <dump_dir_path>\n";
+    print STDERR "USAGE: $0 [-noprod] [-noprep] <synergy_db_name> <dump_dir_path>\n";
     exit 1;
 }
 
