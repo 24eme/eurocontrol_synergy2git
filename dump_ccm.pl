@@ -50,7 +50,8 @@ if (-e 'all_obj.dump') {
     %objs = %$VAR1;
 } else {
     # beware that "not is_product=TRUE" is not the same as "is_product=FALSE" because is_product is undefined for most of the objects
-    %objs = &ccm_query_with_retry('all_obj', ['%objectname', '%status', '%owner', '%release', '%task', '%{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}'], "type match '*' $filter_products");
+    # type acifs causes crashs in ace_grd and ace_cmn
+    %objs = &ccm_query_with_retry('all_obj', ['%objectname', '%status', '%owner', '%release', '%task', '%{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}'], "type!='acifs' $filter_products");
 }
 
 # remove entries where objectname contains /
