@@ -135,7 +135,7 @@ if (-e $filename_not) {
 open (my $filex_not, '>>', $filename_not) or die "Can't append to $filename_not: $!";
 
 
-# step 4 recursive ls of each baselined projects (status is released or prep)
+# step 4 recursive ls of each baselined projects (status is released, integrate or prep)
 # if process is stoped during extraction of a project, the work area shall be removed
 # manually and the file "ls" in the top directory shall be removed so that it is started again at next start:
 #   rm ../arh_repo/project/Oasis_Component_Model/ARH#1/ACE2005B_V0.9/ls
@@ -147,7 +147,7 @@ system ("rm -rf *-tempo*");
 foreach my $k (sort keys %objs) {
     my ($name, $version, $ctype, $instance) = parse_object_name($k);
     next if $ctype ne 'project';
-    if ($objs{$k}->{'status'} ne 'released') {
+    if ($objs{$k}->{'status'} ne 'released' && $objs{$k}->{'status'} ne 'integrate') {
         next if ($include_prep == 0) || $objs{$k}->{'status'} ne 'prep';
     }
 
