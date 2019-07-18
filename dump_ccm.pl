@@ -271,7 +271,7 @@ sub get_previous_version {
     my $k = shift;
     my ($name, $version, $ctype, $instance) = parse_object_name($k);
     my $history_path = "$root_dir/${ctype}/${name}/${instance}/${version}/hist";
-    open my $history, "cat $history_path | perl $bin_dir/history4fileversions.pl -n $k |" ;
+    open my $history, "cat '$history_path' | perl $bin_dir/history4fileversions.pl -n $k |" ;
     my @history = <$history>;
     close $history;
     pop @history;
