@@ -6,6 +6,7 @@ use strict;
 use warnings;
 
 use File::Path qw(make_path);
+use File::Find;
 use File::Basename qw(basename dirname);
 use Cwd qw(realpath);
 use Data::Dumper;
@@ -218,11 +219,36 @@ close $filex_not;
 
 chdir ($root_dir);
 
-# step 5 : retreive the content of directories
+
+# step 5 : retrieve the content of directories
+
+# make it faster by memorizing which projects contains which directories in one pass
+my %dirs_in_projects;
+
+my $current_obj;
+foreach (sort keys %objs) {
+    $current_obj = $_;
+    my ($name, $version, $ctype, $instance) = parse_object_name($current_obj);
+    next if $ctype ne 'project';
+    find (\&wanted, "${ctype}/${name}/${instance}/${version}");
+}
+
+sub wanted {
+    return unless $_ eq 'ls' && -f $_;
+    open my $file, '<', $_ or die "Can't read $File::Find::name: $!";
+    foreach my $line (<$file>) {
+	chomp $line;
+	next if $line eq '';
+	my ($name2, $version2, $ctype2, $instance2) = parse_object_name($line);
+	next if $ctype2 ne 'dir';
+	push @{$dirs_in_projects{$line}}, $current_obj;
+    }
+}
+
 foreach my $k (sort keys %objs) {
     my ($name, $version, $ctype, $instance) = parse_object_name($k);
     next if $ctype ne 'dir';
-    foreach my $fullproject ( projects_containing_an_object($k) ) {
+    foreach my $fullproject ( @{$dirs_in_projects{$k}} ) {
         my %content = &ccm_query_with_retry('dir_content', ['%objectname', '%release'], "is_child_of(\"$k\", \"$fullproject\")");
         my %res;
         my $ls;
@@ -246,6 +272,7 @@ foreach my $k (sort keys %objs) {
         close $ls;
     }
 }
+
 
 # step 6 : retrive the deleted content of directories
 foreach my $k (sort keys %objs) {
@@ -282,25 +309,6 @@ sub get_previous_version {
     chomp($h);
     return $h;
 }
-
-sub projects_containing_an_object {
-    my $objectname = shift;
-    open my $grep, "grep -r  $objectname project |";
-    my @projects;
-    my $idfile;
-    foreach (<$grep>) {
-        chomp;
-        next unless (s/^([^\/]*\/[^\/]*\/[^\/]*\/[^\/]*)\/.*ls:.*/$1\/id/);
-        if ( open $idfile, $_ ) {
-            my $id = <$idfile>;
-            close $idfile;
-            chomp ($id);
-            push @projects, "$id";
-        }
-    }
-    return @projects;
-}
-
 
 # split the four part objectname even in edge cases (names containing dash or separated from version using colon instead of dash)
 sub parse_object_name {
