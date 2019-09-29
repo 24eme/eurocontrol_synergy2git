@@ -2,34 +2,95 @@
     eval 'exec /usr/bin/perl -S $0 ${1+"$@"}'
         if 0; #$running_under_some_shell
 
-# this script creates a snapshot of a released synergy project that has been extracted in branch db.
-# It takes as parameters:
-# - a destination directory
-# - the top level project
-# - the delivery project (even if it is already nested in the top level project)
-# - a list of projects that do not need to be dumped and that shall be taken as foreign dependencies
 
-# cd /development/git/jef/arh_repo/
-# ~/homemade/eurocontrol_synergy2git_old/my_cfs /tmp/jef Oasis_Generation-ACE2018A_20180606:project:ARH#1 Oasis_Infrastructure_Delivery-ACE2019A_V1.0:project:ARH#1 
-# rm -rf  /development/infra-project/jfbocque/SPV19A; time ~/homemade/eurocontrol_synergy2git_old/my_cfs /development/infra-project/jfbocque/SPV19A ESCAPE_Supervision-ACE2019A_V2.1:project:ARH#1 ESCAPE_Supervision_Delivery-ACE2019A_V2.1:project:ARH#1 Oasis_Infrastructure_Delivery 2>&1 | tee ~/mm.log
+=head1 SYNOPSIS
 
+    my_cfs [--depend <external dependencies>] [--first <projects>] [--last <projects>] <dump_directory> <top level project objectname> { <nested projects objectnames> }
+
+=head1 DESCRIPTION
+
+this script creates a snapshot of a released synergy project that has been extracted in branch db.
+ It takes as parameters:
+ - the directory where synergy has been dumped to
+ - the top level project
+ - a list (that may be empty) of subprojects objectnames. The intended use is the delivery project
+
+ it has optional parameters
+ --depend a list (colon separated) of project names that do not need to be dumped and that shall be taken as foreign dependencies
+ --first a list (colon separated) of project names that should be dumped in priority over other projects
+ --last a list (colon separated) of project names that should be dumped after other projects
+ The optional parameters can also be passed as environment variables CFS_FIRST CFS_LAST CFS_DEPEND
+
+=head1 EXAMPLE
+
+ cd /development/git/jef/arh_repo/
+ ~/homemade/eurocontrol_synergy2git_old/my_cfs /tmp/jef Oasis_Generation-ACE2018A_20180606:project:ARH#1 Oasis_Infrastructure_Delivery-ACE2019A_V1.0:project:ARH#1 
+
+ ~/homemade/eurocontrol_synergy2git_old/my_cfs --depend Oasis_Infrastructure_Delivery /development/infra-project/jfbocque/SPV19A ESCAPE_Supervision-ACE2019A_V2.1:project:ARH#1 ESCAPE_Supervision_Delivery-ACE2019A_V2.1:project:ARH#1  2>&1 | tee ~/mm.log
+
+=head1 REMARK
+
+  if you need to keep empty directories in git, you may need the command
+  find . -type d -empty -exec touch {}/.keep \;
+
+=cut
 
 use strict;
 use warnings;
 
 use File::Path qw(make_path);
 use Cwd qw(cwd);
+use Getopt::Long;
+use Pod::Usage;
+
+my $opt_first;
+my $opt_last;
+my $opt_depend;
+
+$opt_first  = $ENV{CFS_FIRST}  if exists $ENV{CFS_FIRST};
+$opt_last   = $ENV{CFS_LAST}   if exists $ENV{CFS_LAST};
+$opt_depend = $ENV{CFS_DEPEND} if exists $ENV{CFS_DEPEND};
+
+GetOptions('help'     => \my $help,
+           'first=s'  => \$opt_first,
+           'last=s'   => \$opt_last,
+           'depend=s' => \$opt_depend) or pod2usage(q(-verbose) => 1);
+pod2usage(q(-verbose) => 2) if $help;
+
+my @dep_names;
+@dep_names = split(':', $opt_depend) if defined $opt_depend and $opt_depend ne '';
+
+my %order_names;
+if (defined $opt_first and $opt_first ne '') {
+    my @a = split ':', $opt_first; 
+    @order_names{@a} = (-$#a-1)..-1;
+}
+
+my @last_names_array;
+if (defined $opt_last and $opt_last ne '') {
+    @last_names_array = split ':', $opt_last; 
+    @order_names{@last_names_array} = 1..($#last_names_array+1);
+}
 
 my %obj2content;
 my %obj2hist; # not used in this script
 my $verbose = 0;
 
 print STDERR "$0 "."@ARGV"."\n";
+print STDERR 'depend: ', join (', ', @dep_names), "\n" if scalar @dep_names;
 
-my ($path2gitdb, $top_objectname, $delivery_objectname, @dep_names) = @ARGV;
-unless ($path2gitdb && $top_objectname){
-    print STDERR "USAGE $0 <path_to_git_db> <top_objectname>\n";
-    exit 4;
+my ($path2gitdb, $top_objectname, @delivery_objectnames) = @ARGV;
+pod2usage(q(-verbose) => 1) unless $path2gitdb && $top_objectname;
+
+# ensure that order_names contains all the delivery projects
+foreach my $delivery (@delivery_objectnames) {
+    my ($delname, $delversion, $delctype, $delinstance) = parse_object_name($delivery);
+    if (exists $order_names{$delname}) {
+        print STDERR "$delname was already in \%order_names: $order_names{$delname}\n";
+    } else {
+        push @last_names_array, $delname;
+        $order_names{$delname} = $#last_names_array+1;
+    }
 }
 
 my $root = cwd();
@@ -59,11 +120,17 @@ unless (keys(%obj2hist)."") {
 
 my %hdep_names = map {($_ => 1)} @dep_names;
 
-my ($delname, $delversion, $delctype, $delinstance);
+sub get_order {
+    my $objectname = shift;
+    my $name = (parse_object_name($objectname))[0];
+    return exists $order_names{$name} ? $order_names{$name} : 0;
+}
 
 # if an object is encountered more than once, the second occurence is replaced by a symlink
 my %encountered_objects;
 
+my $main_dir = (parse_object_name($top_objectname))[0] . '/';
+warn "Warning: $main_dir is not empty\n" if <$main_dir/*>;
 dump_tree('', $top_objectname, '') or die ("unable to find $top_objectname");
 
 sub dump_tree {
@@ -78,9 +145,20 @@ sub dump_tree {
         return 0;
     }
 
-
     # subprojects are processed after the content of project, but their location is memorized first
     my @subprojects = grep {(parse_object_name($_))[2] eq 'project'} @ls;
+    # delivery projects 
+    if ($relpath eq $main_dir) {
+        foreach my $delivery (@delivery_objectnames) {
+            my ($delname, $delversion, $delctype, $delinstance) = parse_object_name($delivery);
+            @subprojects = grep {(parse_object_name($_))[0] ne $delname} @subprojects;
+            push @subprojects, $delivery;
+        }
+    }
+
+    @subprojects = sort {get_order($a) <=> get_order($b) || $a cmp $b} @subprojects;
+    print 'Subprojects ', join (', ', @subprojects), "\n" if scalar @subprojects;
+
     map {$encountered_objects{$_} = $relpath . (parse_object_name($_))[0]
              unless exists $encountered_objects{$_}} @subprojects;
     # dump content of project except subprojects
@@ -97,13 +175,13 @@ sub dump_tree {
             createsymlink($name, $relpath, $encountered_objects{$file});
         } elsif (exists $obj2content{$file}) {
             if ($obj2content{$file} eq '') { # this should hapen only for is_product objects. Normally obj2content does not exist for them.
-                warn "no content for $file  for $relpath\n";
+                warn "Warning: no content for $file for $relpath\n";
             } else {
                 `git cat-file blob $obj2content{$file} > "$root/${relpath}$name" 2> /dev/null || echo "ERROR: impossible to retreive $file ($obj2content{$file}) to $root/${relpath}$name" >&2`;
                 chmod (0755, "$root/${relpath}$name") if exists $exec_obj{$file};
             }
         } else {
-            warn "$file not found for $relpath\n";
+            warn "Warning: $file not found for $relpath\n";
             # OaFctC.i-ACE2018A_V0.1:inline:ARH#2 does not exist in md5_obj.csv because it is a product
         }
         $encountered_objects{$file} = "${relpath}$name" unless exists $encountered_objects{$file};
@@ -111,7 +189,6 @@ sub dump_tree {
     # dump subprojects
     foreach my $proj (@subprojects) {
         my ($name, $version, $ctype, $instance) = parse_object_name($proj);
-        next if $name eq $delname; # ensure delivery project is dumped last
         if (exists $hdep_names{$name}) {
             print STDERR "replace subproject $name by a link\n" if($verbose);
             createsymlink($name, $relpath, "dependencies/${name}-$version");
