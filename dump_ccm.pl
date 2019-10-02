@@ -52,13 +52,14 @@ if (-e 'all_obj.dump') {
 } else {
     # beware that "not is_product=TRUE" is not the same as "is_product=FALSE" because is_product is undefined for most of the objects
     # type acifs causes crashs in ace_grd and ace_cmn
-    %objs = &ccm_query_with_retry('all_obj', ['%objectname', '%status', '%owner', '%release', '%task', '%{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}'], "type!='acifc' and type!='acifs' $filter_products");
+    %objs = &ccm_query_with_retry('all_obj', ['%objectname', '%status', '%owner', '%release', '%task', '%{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}'], "type!='acifs' $filter_products");
 }
 
 # remove entries where objectname contains /
 map {delete $objs{$_};} grep {/\//} keys %objs;
 # remove entrie of temporairy objects
 map {delete $objs{$_};} grep {/-temp/} keys %objs;
+delete $objs{'ERGO_IHM_JAVA-HMI#ACE2008B_Int_20100910:project:ACE_EONS#1'};
 print "Objs finished\n";
 
 
@@ -90,20 +91,18 @@ if (-e $filename) {
         make_path($path) or die "Can't mkdir -p $path: $!" unless -d $path;
         my $hash_content = "";
         my $hash_hist    = "";
-        if ($ctype !~ m/^(project|symlink|dir|baseline|dcmdbdef|folder_temp|project_grouping|saved_query|processdef)$/) {
+        if ($ctype !~ m/^(project|symlink|dir|dcmdbdef|folder_temp|project_grouping|saved_query|processdef)$/) {
             system ("ccm cat '$k' > '$path/content'") == 0  or warn ("Can't cat $k\n");
             $hash_content = `git hash-object '$path/content'`;
         }elsif($ctype eq 'dir') {
             $hash_content = `echo $k | git hash-object /dev/stdin`;
         }
-	if ($ctype !~ m/^(baseline|dcmdbdef|folder_temp|project_grouping|saved_query|processdef)$/) {
-	    if (system ("ccm history '$k' > '$path/hist'") == 0) {
-		$hash_hist    = `git hash-object '$path/hist'`;
-	    } else {
-		warn ("Can't ccm history $k\n");
-	    }
+        if (system ("ccm history '$k' > '$path/hist'") == 0) {
+            $hash_hist    = `git hash-object $path/hist`;
+        } else {
+            warn ("Can't ccm history $k\n");
         }
-        system("echo '$k' > '$path/id'");
+        system("echo $k > '$path/id'");
         chomp $hash_content;
         chomp $hash_hist;
         print $dest "$hash_content;$hash_hist;$k;$path\n";
@@ -163,7 +162,7 @@ foreach my $k (sort keys %objs) {
     print "Creating a wa of $k\n";
 
     # create a copy of a project with a working area (link based) and no_update
-    if (system("ccm cp -t tempo$$ -no_u -lb -scope project_only -setpath $wa_dir $k") != 0) {
+    if (system("ccm cp -release ACE2019A -t tempo$$ -no_u -lb -scope project_only -setpath $wa_dir $k") != 0) {
         warn "ccm cp failed for $k skip it for the moment\n";
         next;
     }
