@@ -191,7 +191,7 @@ sub dump_tree {
         my ($name, $version, $ctype, $instance) = parse_object_name($proj);
         if (exists $hdep_names{$name}) {
             print STDERR "replace subproject $name by a link\n" if($verbose);
-            createsymlink($name, $relpath, "dependencies/${name}-$version");
+            createsymlink($name, $relpath, "${main_dir}dependencies/${name}-$version");
         } elsif ($encountered_objects{$proj} ne "${relpath}$name") {
             createsymlink($name, $relpath, $encountered_objects{$proj});
         } else {
