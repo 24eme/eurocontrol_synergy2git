@@ -10,6 +10,9 @@ use File::Find;
 use File::Basename qw(basename dirname);
 use Cwd qw(realpath);
 use Data::Dumper;
+use POSIX;
+
+print strftime ('%F %T ', localtime $^T), join (' ', $0, @ARGV), "\n";
 
 my $filter_products = '';
 my $include_prep = 1;
@@ -22,7 +25,7 @@ if (defined $synergy_db and $synergy_db eq '-noprod') {
     # beware that "not is_product=TRUE" is not the same as "is_product=FALSE" because is_product is undefined for most of the objects
     $filter_products = 'and not is_product=TRUE';
     goto START;
-# parameter -prep allows projects in prep state to be dumped
+# parameter -noprep avoids projects in prep state to be dumped
 } elsif (defined $synergy_db and $synergy_db eq '-noprep') {
     $include_prep = 0;
     goto START;
@@ -60,7 +63,8 @@ map {delete $objs{$_};} grep {/\//} keys %objs;
 # remove entrie of temporairy objects
 map {delete $objs{$_};} grep {/-temp/} keys %objs;
 delete $objs{'ERGO_IHM_JAVA-HMI#ACE2008B_Int_20100910:project:ACE_EONS#1'};
-print "Objs finished\n";
+delete $objs{'Common_Items-ACE2016A_V3.0:project:ACE_CMN#1'};
+print strftime ('%F %T ', localtime (time)), "Objs finished\n";
 
 
 # step 2: query all tasks
@@ -71,7 +75,7 @@ if (-e 'all_task.dump') {
 } else {
     %tasks = &ccm_query_with_retry('all_task', ['%displayname', '%release', '%task_synopsis'], '-t task');
 }
-print "Tasks finished\n";
+print strftime ('%F %T ', localtime (time)), "Tasks finished\n";
 
 # step 3: dump all objects and keep their hash (and the hash of their history)
 my $filename = "$root_dir/md5_obj.csv";
@@ -136,6 +140,7 @@ if (-e $filename_not) {
     }
 }
 open (my $filex_not, '>>', $filename_not) or die "Can't append to $filename_not: $!";
+print strftime ('%F %T ', localtime (time)), "Step 3 finished\n";
 
 
 # step 4 recursive ls of each baselined projects (status is released, integrate or prep)
@@ -219,6 +224,7 @@ close $filex;
 close $filex_not;
 
 chdir ($root_dir);
+print strftime ('%F %T ', localtime (time)), "Step 4 finished\n";
 
 
 # step 5 : retrieve the content of directories
@@ -273,6 +279,7 @@ foreach my $k (sort keys %objs) {
         close $ls;
     }
 }
+print strftime ('%F %T ', localtime (time)), "Step 5 finished\n";
 
 
 # step 6 : retrive the deleted content of directories
@@ -294,6 +301,7 @@ foreach my $k (sort keys %objs) {
     close $diff;
     close $ls;
 }
+print strftime ('%F %T ', localtime (time)), "Step 6 finished\n";
 
 sub get_previous_version {
     my $k = shift;
