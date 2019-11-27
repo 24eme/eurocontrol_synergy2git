@@ -30,8 +30,8 @@ this script creates a snapshot of a released synergy project that has been extra
 
 =head1 REMARK
 
-  if you need to keep empty directories in git, you may need the command
-  find . -type d -empty -exec touch {}/.keep \;
+  if you need to keep empty directories in git, you may need the command (the loop allows to avoid .git directory)
+  for i in * ; do find $i -type d -empty -exec touch {}/.keep \; ; done
 
 =cut
 
