@@ -169,10 +169,10 @@ sub dump_tree {
             my ($symlink_content) = git_show(object_name_to_path($file)."/content");
             print "symlink $symlink_content, $root/${relpath}$name\n" if ($verbose);
             symlink ($symlink_content, "$root/${relpath}$name");
-        } elsif ($ctype eq 'dir') {
-            dump_tree("${relpath}$name/", $top_objectname, "${subpath}$name/");
         } elsif (exists $encountered_objects{$file}) {
             createsymlink($name, $relpath, $encountered_objects{$file});
+        } elsif ($ctype eq 'dir') {
+            dump_tree("${relpath}$name/", $top_objectname, "${subpath}$name/");
         } elsif (exists $obj2content{$file}) {
             if ($obj2content{$file} eq '') { # this should hapen only for is_product objects. Normally obj2content does not exist for them.
                 warn "Warning: no content for $file for $relpath\n";
