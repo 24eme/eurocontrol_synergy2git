@@ -48,6 +48,7 @@ unless (defined $synergy_db && defined $root_dir) {
 chdir ($root_dir);
 
 # step 1: query all objects (not is_product if -noprod is specified)
+#my @all_types = map {my ($name) = split(' ', $_);$name} `ccm typedef -l`;
 my %objs;
 if (-e 'all_obj.dump') {
     my $VAR1 = do 'all_obj.dump';
@@ -55,7 +56,8 @@ if (-e 'all_obj.dump') {
 } else {
     # beware that "not is_product=TRUE" is not the same as "is_product=FALSE" because is_product is undefined for most of the objects
     # type acifs causes crashs in ace_grd and ace_cmn
-    %objs = &ccm_query_with_retry('all_obj', ['%objectname', '%status', '%owner', '%release', '%task', '%{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}'], "type!='acifs' $filter_products");
+    # type acifc and bat causes crashs in ino
+    %objs = &ccm_query_with_retry('all_obj', ['%objectname', '%status', '%owner', '%release', '%task', '%{create_time[dateformat="yyyy-MM-dd_HH:mm:ss"]}'], "type!='acifs' and type!='acifc' and type!='bat' $filter_products");
 }
 
 # remove entries where objectname contains /
@@ -102,7 +104,7 @@ if (-e $filename) {
             $hash_content = `echo $k | git hash-object /dev/stdin`;
         }
         if (system ("ccm history '$k' > '$path/hist'") == 0) {
-            $hash_hist    = `git hash-object $path/hist`;
+            $hash_hist    = `git hash-object '$path/hist'`;
         } else {
             warn ("Can't ccm history $k\n");
         }
@@ -209,6 +211,7 @@ foreach my $k (sort keys %objs) {
     # delete the project
     if (system("ccm delete '$prj'") != 0) {
         warn "ccm delete failed for $prj\n";
+	sleep (5);
         &connect();
         if (system("ccm delete '$prj'") != 0) {
             warn "ccm delete failed twice for $prj\n";
