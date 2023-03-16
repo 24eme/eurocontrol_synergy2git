@@ -221,7 +221,7 @@ sub findrealpath {
 sub git_show {
     my $path = shift;
     print STDERR "git show db:${path}\n" if ($verbose);
-    open my $cmd, "git show db:${path} |" or die "Can't exec git show db:${path}: $!";
+    open my $cmd, "git show 'db:${path}' |" or die "Can't exec git show 'db:${path}': $!";
     my @files = <$cmd>;
     chomp @files;
     return @files;
